@@ -1,7 +1,9 @@
-import { Controller, Post, Body, Request, Res } from '@nestjs/common';
+import { Controller, Post, Body, Request, Res, UseGuards, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Response } from 'express';
-import { AuthDto } from '../auth/dto/create-auth.dto';
+import { AuthDto, profileDto } from '../auth/dto/create-auth.dto';
+import { LocalAuthGuard } from './local-auth.guard';
+
 
 
 @Controller('auth')
@@ -63,6 +65,12 @@ export class AuthController {
   @Post('forgot-password')
   async forgotPassword(@Body() body: { email: string }) {
     return this.authService.forgotPassword(body.email);
+  }
+
+  @UseGuards(LocalAuthGuard)
+  @Post('update-profile')
+  async updateProfile(@Body() data: profileDto, @Req() req) {
+    return await this.authService.updateProfile(data, req.user.userId);
   }
 
   @Post('reset-password')

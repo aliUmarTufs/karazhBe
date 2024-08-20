@@ -5,7 +5,7 @@ import * as bcrypt from 'bcryptjs';
 import { OtpService } from '../otp/otp.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailerService } from '../mailer/mailer.service';
-import { AuthDto, UserDto } from '../auth/dto/create-auth.dto';
+import { AuthDto, profileDto, UserDto } from '../auth/dto/create-auth.dto';
 import { JwtPayload } from './jwt-payload.interface';
 
 @Injectable()
@@ -144,6 +144,31 @@ export class AuthService {
     await this.mailerService.sendResetPasswordEmail(email, resetToken);
 
     return { message: 'Password reset email sent' };
+  }
+
+  async updateProfile(data: profileDto, userId: number) {
+
+    const checkIfUserExists = await this.prisma.user.findFirst({
+      where: { id: userId },
+    })
+
+    if (!checkIfUserExists) {
+      throw new BadRequestException('User not found');
+    }
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        industry: data.industry,
+        name: data.name,
+      }
+    })
+
+    return {
+      status: true,
+      message: 'Profile updated successfully',
+      data: []
+    }
+
   }
 
   async resetPassword(token: string, newPassword: string) {

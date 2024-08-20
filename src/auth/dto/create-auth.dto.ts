@@ -20,3 +20,15 @@ export class UserDto {
   email: string;
 }
 
+export class profileDto {
+  @IsNotEmpty()
+  @IsString()
+  name: string;
+
+  @IsNotEmpty()
+  @IsString()
+  industry: string;
+
+
+}
+
