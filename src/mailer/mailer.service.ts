@@ -15,12 +15,12 @@ export class MailerService {
     // });
 
     this.transporter = nodemailer.createTransport({
-      host: "sandbox.smtp.mailtrap.io",
+      host: 'sandbox.smtp.mailtrap.io',
       port: 2525,
       auth: {
-        user: "7581454056eff5",
-        pass: "032c50eb4a0c4d"
-      }
+        user: '7581454056eff5',
+        pass: '032c50eb4a0c4d',
+      },
     });
   }
 

@@ -8,11 +8,14 @@ import { addMinutes } from 'date-fns';
 export class OtpService {
   constructor(
     private prisma: PrismaService,
-    private mailerService: MailerService
+    private mailerService: MailerService,
   ) {}
 
   async generateOtp(email: string) {
-    const otp = otpGenerator.generate(6, { upperCase: false, specialChars: false });
+    const otp = otpGenerator.generate(6, {
+      upperCase: false,
+      specialChars: false,
+    });
     const expiresAt = addMinutes(new Date(), 10); // OTP expires in 10 minutes
 
     const user = await this.prisma.user.findUnique({ where: { email } });

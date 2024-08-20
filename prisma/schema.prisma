@@ -14,7 +14,7 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
+  id   String @id @default(cuid())
   username  String   @unique
   email     String   @unique
   password  String
@@ -25,25 +25,67 @@ model User {
   updatedAt DateTime @updatedAt
   userResetToken PasswordResetToken[]
   otp       Otp[]
-
+  Channels Channel[]
+  Posts Post[]
 }
 
-
-
 model PasswordResetToken {
-  id        Int      @id @default(autoincrement())
+  id   String @id @default(cuid())
   token     String   @unique
-  userId    Int
+  userId    String
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
 }
 
 model Otp {
-  id        Int      @id @default(autoincrement())
+  id   String @id @default(cuid())
   token     String   @unique
-  userId    Int
+  userId    String
   user      User     @relation(fields: [userId], references: [id])
   expiresAt DateTime
   createdAt DateTime @default(now())
 }
+
+model Channel {
+  id   String @id @default(cuid())
+  name      String
+  authToken String
+  userId    String
+  workSpaceId String
+  user      User     @relation(fields: [userId], references: [id])
+  posts     Post[]
+}
+
+model Post {
+  id   String @id @default(cuid())
+  content      String
+  media        Json
+  status     PostStatus
+  scheduledAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  userId       String
+  channelId  String
+  workSpaceId String
+  user         User      @relation(fields: [userId], references: [id])
+  channel    Channel   @relation(fields: [channelId], references: [id])
+}
+
+// model PostChannel {
+//   id         Int       @id @default(autoincrement())
+//   postId     Int
+//   channelId  Int
+//   status     PostStatus
+//   post       Post      @relation(fields: [postId], references: [id])
+//   channel    Channel   @relation(fields: [channelId], references: [id])
+// }
+
+enum PostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  FAILED
+  ALL
+}
+
 

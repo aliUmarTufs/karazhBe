@@ -11,6 +11,7 @@ import { MailerService } from './mailer/mailer.service';
 import { MailerModule } from './mailer/mailer.module';
 import { OtpModule } from './otp/otp.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { PostsModule } from './posts/posts.module';
 
 @Module({
   imports: [
@@ -28,7 +29,8 @@ import { PrismaModule } from './prisma/prisma.module';
     }),
     MailerModule,
     OtpModule,
-    PrismaModule,],
+    PrismaModule,
+    PostsModule,],
   controllers: [AppController],
   providers: [AppService, PrismaService, OtpService, MailerService],
 })

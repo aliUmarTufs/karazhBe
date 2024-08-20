@@ -1,10 +1,16 @@
-import { Controller, Post, Body, Request, Res, UseGuards, Req } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Request,
+  Res,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Response } from 'express';
 import { AuthDto, profileDto } from '../auth/dto/create-auth.dto';
 import { LocalAuthGuard } from './local-auth.guard';
-
-
 
 @Controller('auth')
 export class AuthController {
@@ -12,13 +18,12 @@ export class AuthController {
 
   @Post('signup')
   async signUp(@Body() authDto: AuthDto) {
-    const newUser =  await this.authService.signUp(authDto);
+    const newUser = await this.authService.signUp(authDto);
     return {
       status: true,
       message: 'User created successfully',
       data: newUser,
     };
-    
   }
 
   @Post('verify-otp')
@@ -34,14 +39,16 @@ export class AuthController {
 
   @Post('verify-email')
   async verifyEmail() {
-     return await this.authService.verifyEmail();
-    
+    return await this.authService.verifyEmail();
   }
 
   @Post('login')
   async login(@Body() body: { email: string; password: string }) {
-    const getUserDetails = await this.authService.login(body.email, body.password);
-    
+    const getUserDetails = await this.authService.login(
+      body.email,
+      body.password,
+    );
+
     return {
       status: true,
       message: 'User logged in successfully',
@@ -52,7 +59,8 @@ export class AuthController {
   @Post('refresh')
   async refresh(@Request() req, @Res() res: Response) {
     const refreshToken = req.cookies['refresh_token'];
-    const { access_token, refresh_token } = await this.authService.refresh(refreshToken);
+    const { access_token, refresh_token } =
+      await this.authService.refresh(refreshToken);
     res.cookie('refresh_token', refresh_token, {
       httpOnly: true,
       secure: true,

@@ -12,7 +12,9 @@ export class UsersService {
   }
 
   async create(userDetails: CreateUserDto) {
-    const uniqueUsername = await this.generateUniqueUsername(userDetails.email.split('@')[0]);
+    const uniqueUsername = await this.generateUniqueUsername(
+      userDetails.email.split('@')[0],
+    );
 
     return this.prisma.user.create({
       data: {
@@ -31,7 +33,7 @@ export class UsersService {
     return await this.comparePassword(password, user.password);
   }
 
-  async updatePassword(userId: number, newPassword: string) {
+  async updatePassword(userId: string, newPassword: string) {
     return this.prisma.user.update({
       where: { id: userId },
       data: { password: newPassword },
@@ -67,8 +69,10 @@ export class UsersService {
     return bcrypt.hash(password, 10); // 10 is the salt rounds
   }
 
-  private async comparePassword(password: string, hash: string): Promise<boolean> {
+  private async comparePassword(
+    password: string,
+    hash: string,
+  ): Promise<boolean> {
     return bcrypt.compare(password, hash);
   }
-
 }
