@@ -20,11 +20,15 @@ export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
   @Post()
-  async createPost(@Body() createPostDto: CreatePostDto) {
+  async createPost(
+    @Body() createPostDto: CreatePostDto,
+    @Query() query?: { channelName?: string },
+  ) {
     this.logger.log(
       `${this.createPost.name} has been called | createPostDto: ${JSON.stringify(createPostDto)}`,
     );
-    return this.postsService.createPost(createPostDto);
+    const { channelName } = query;
+    return this.postsService.createPost(createPostDto, channelName);
   }
 
   @Patch(':id')

@@ -65,10 +65,10 @@ model Post {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   userId       String
-  channelId  String
+  channelId  String?
   workSpaceId String
   user         User      @relation(fields: [userId], references: [id])
-  channel    Channel   @relation(fields: [channelId], references: [id])
+  channel    Channel?   @relation(fields: [channelId], references: [id])
 }
 
 // model PostChannel {
@@ -86,6 +86,7 @@ enum PostStatus {
   PUBLISHED
   FAILED
   ALL
+  IDEA
 }
 
 

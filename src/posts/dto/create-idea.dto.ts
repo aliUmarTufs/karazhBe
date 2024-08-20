@@ -1,8 +1,7 @@
-import { IsNotEmpty, IsEnum, IsDate, IsString } from 'class-validator';
+import { IsNotEmpty, IsEnum, IsString } from 'class-validator';
 import { PostStatus } from '@prisma/client';
-import { Type } from 'class-transformer';
 
-export class CreatePostDto {
+export class CreateIdeaDto {
   @IsNotEmpty()
   content: string;
 
@@ -11,14 +10,6 @@ export class CreatePostDto {
 
   @IsEnum(PostStatus)
   status: PostStatus;
-
-  @IsDate()
-  @Type(() => Date) // This line will transform the incoming string to a Date object
-  scheduledAt?: Date;
-
-  @IsString()
-  @IsNotEmpty()
-  channelId: string; // Single channel ID
 
   @IsString()
   @IsNotEmpty()

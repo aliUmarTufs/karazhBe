@@ -1,28 +1,58 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { FilterPostsDto } from './dto/filter-posts.dto';
+import { PostStatus } from '@prisma/client';
+import { CreateIdeaDto } from './dto/create-idea.dto';
 
 @Injectable()
 export class PostsService {
   private readonly logger = new Logger(PostsService.name);
   constructor(private prisma: PrismaService) {}
 
-  async createPost(createPostDto: CreatePostDto) {
+  async createPost(
+    createPostDto: CreatePostDto,
+    channelName?: string | null | undefined,
+  ) {
     this.logger.log(
       `${this.createPost.name} has been called | createPostDto: ${JSON.stringify(createPostDto)}`,
     );
     try {
-      const createPost = await this.prisma.post.create({
-        data: {
-          ...createPostDto,
-        },
-      });
+      let createPost;
+      if (createPostDto.status === PostStatus.IDEA) {
+        const createIdeaDto: CreateIdeaDto = {
+          content: createPostDto.content,
+          media: createPostDto.media,
+          userId: createPostDto.userId,
+          workSpaceId: createPostDto.workSpaceId,
+          status: createPostDto.status,
+        };
+        createPost = await this.prisma.post.create({
+          data: {
+            ...createIdeaDto,
+          },
+        });
+      } else {
+        if (
+          (channelName !== undefined || channelName !== null) &&
+          (channelName === 'tiktok' || channelName === 'instagram') &&
+          Object.keys(createPostDto.media).length === 0
+        ) {
+          throw new BadRequestException(
+            'Error: Media Should not be Empty for Tiktok/Instagram',
+          );
+        }
+        createPost = await this.prisma.post.create({
+          data: {
+            ...createPostDto,
+          },
+        });
+      }
 
       return {
         status: true,
-        message: 'Post Created Successfully',
+        message: `Your ${createPostDto.status === 'IDEA' ? 'idea' : 'post'} has been created!`,
         data: createPost,
       };
     } catch (error) {
@@ -52,7 +82,7 @@ export class PostsService {
 
       return {
         status: true,
-        message: 'Post Updated Successfully',
+        message: 'Your changes has been saved!',
         data: updatePost,
       };
     } catch (error) {
@@ -106,7 +136,15 @@ export class PostsService {
         userId,
         workSpaceId,
         AND: [
-          status === 'ALL' ? {} : { status },
+          status === 'ALL'
+            ? {
+                status: {
+                  not: {
+                    equals: PostStatus.IDEA, // Use the enum value instead of a string
+                  },
+                },
+              }
+            : { status: status as PostStatus }, // Correctly cast the status to the enum type
           channelId === 'ALL' ? {} : { channelId },
           startDate && endDate
             ? {

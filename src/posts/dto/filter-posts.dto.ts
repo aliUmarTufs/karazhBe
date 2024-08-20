@@ -11,7 +11,7 @@ import { PostStatus } from '@prisma/client';
 export class FilterPostsDto {
   @IsOptional()
   @IsEnum(PostStatus)
-  status?: PostStatus;
+  status: PostStatus;
 
   @IsOptional()
   @IsString()
@@ -21,7 +21,7 @@ export class FilterPostsDto {
   @IsOptional()
   @IsString()
   @Type(() => String)
-  workSpaceId?: string;
+  workSpaceId: string;
 
   @IsString()
   @IsNotEmpty()
