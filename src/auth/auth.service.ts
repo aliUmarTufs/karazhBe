@@ -1,15 +1,16 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import * as bcrypt from 'bcryptjs';
 import { OtpService } from '../otp/otp.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailerService } from '../mailer/mailer.service';
-import { AuthDto } from '../auth/dto/create-auth.dto';
+import { AuthDto, UserDto } from '../auth/dto/create-auth.dto';
 import { JwtPayload } from './jwt-payload.interface';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
@@ -19,30 +20,33 @@ export class AuthService {
   ) {}
 
   async signUp(authDto: AuthDto) {
-    await this.usersService.create(authDto);
-    await this.otpService.generateOtp(authDto.email);
-    return { message: 'OTP has been sent to your email for verification' };
+    try {
+    const newUserDetails = await this.usersService.create(authDto);
+    const getTokens = await this.generateTokens(newUserDetails);
+    return { user: newUserDetails, accessToken: getTokens.access_token, refreshToken: getTokens.refresh_token };
+
+  } catch(error){
+    throw new BadRequestException('User already exists')
+  }
   }
 
   async validateUser(email: string, password: string): Promise<any> {
     const user = await this.usersService.findOneByEmail(email);
-    if (user && await bcrypt.compare(password, user.password)) {
+    const checkPass = await bcrypt.compare(password, user.password);
+    if (user && checkPass) {
       return user;
     }
     return null;
   }
 
   async login(email: string, password: string) {
+    try {
     const user = await this.validateUser(email, password);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
     
-    const payload: JwtPayload = { email: user.email, sub: user.id };
-    
-    // Generate tokens
-    const access_token = this.jwtService.sign(payload, { expiresIn: '15m' }); // Example expiry
-    const refresh_token = this.jwtService.sign(payload, { expiresIn: '7d' }); // Example expiry
+    const getTokens = await this.generateTokens(user);
     
     return {
       user: {
@@ -50,9 +54,28 @@ export class AuthService {
         email: user.email,
         username: user.username, // Include any other user details you need
       },
+      accessToken: getTokens.access_token,
+      refreshToken: getTokens.refresh_token,
+    };
+  } catch(error){
+    this.logger.error(error);
+    throw new BadRequestException('Invalid credentials')
+  }
+  }
+
+  async generateTokens (user: any) {
+
+    const payload: JwtPayload = { email: user.email, sub: user.id, userId: user.id };
+    
+    // Generate tokens
+    const access_token = this.jwtService.sign(payload, { expiresIn: '15m' }); // Example expiry
+    const refresh_token = this.jwtService.sign(payload, { expiresIn: '7d' }); // Example expiry
+
+    return {
       access_token,
       refresh_token,
     };
+
   }
 
 
@@ -78,9 +101,27 @@ export class AuthService {
     const user = await this.usersService.findOneByEmail(email);
     if (!user) {
       throw new UnauthorizedException('User not found');
-    }
+    }  
 
-    return this.login(user.email, user.password);
+    const payload: JwtPayload = { email: user.email, sub: user.id, userId: user.id };
+    
+    // Generate tokens
+    const access_token = this.jwtService.sign(payload, { expiresIn: '15m' }); // Example expiry
+    const refresh_token = this.jwtService.sign(payload, { expiresIn: '7d' }); // Example expiry
+    
+    const userDetails = {
+      id: user.id,
+      email: user.email,
+      username: user.username, // Include any other user details you need,
+      access_token: access_token,
+      refresh_token: refresh_token,
+    };
+
+    return {
+      status: true,
+      menubar: 'Account verified successfully',
+      data: userDetails
+    };
   }
 
   async resendOtp(email: string) {
@@ -116,5 +157,39 @@ export class AuthService {
     await this.usersService.updatePassword(user.id, hashedPassword);
 
     return { message: 'Password updated successfully' };
+  }
+
+  async sendEmailVerification(user: UserDto) {
+    const getUserDetails = await this.usersService.findOneByEmail(user.email)
+    const payload = { email: getUserDetails.email, sub: getUserDetails.id };
+    const token = this.jwtService.sign(payload, { expiresIn: '1h' });
+
+    const verificationUrl = `${process.env.APP_URL}/auth/verify-email?token=${token}`;
+
+    // await this.mailerService.sendEmailVerification({
+    //   to: user.email,
+    //   subject: 'Email Verification',
+    //   template: './email-verification', // Assuming you have a template in your mailer setup
+    //   context: {
+    //     name: getUserDetails.username,
+    //     verificationUrl,
+    //   },
+    // });
+
+    return { message: 'Verification email sent' };
+  }
+
+  verifyEmail() {
+     try { 
+    return {
+      status: true,
+      message: 'Email verified successfully',
+      data: []
+    }
+
+  } catch(error){
+    this.logger.error(error);
+    throw new BadRequestException('Unable to verify email address')
+  }
   }
 }

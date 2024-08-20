@@ -17,7 +17,7 @@ export class UsersService {
     return this.prisma.user.create({
       data: {
         email: userDetails.email,
-        password: userDetails.password,
+        password: await this.hashPassword(userDetails.password),
         username: uniqueUsername,
       },
     });

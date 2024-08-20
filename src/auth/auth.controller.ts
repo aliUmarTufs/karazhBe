@@ -9,8 +9,14 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Post('signup')
-  async signUp(authDto: AuthDto) {
-    return this.authService.signUp(authDto);
+  async signUp(@Body() authDto: AuthDto) {
+    const newUser =  await this.authService.signUp(authDto);
+    return {
+      status: true,
+      message: 'User created successfully',
+      data: newUser,
+    };
+    
   }
 
   @Post('verify-otp')
@@ -24,16 +30,21 @@ export class AuthController {
     return { message: 'OTP has been resent to your email' };
   }
 
+  @Post('verify-email')
+  async verifyEmail() {
+     return await this.authService.verifyEmail();
+    
+  }
+
   @Post('login')
-  async login(@Body() body: { email: string; password: string }, @Res() res: Response) {
-    const { access_token, refresh_token } = await this.authService.login(body.email, body.password);
-    res.cookie('refresh_token', refresh_token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
-    return res.json({ access_token });
+  async login(@Body() body: { email: string; password: string }) {
+    const getUserDetails = await this.authService.login(body.email, body.password);
+    
+    return {
+      status: true,
+      message: 'User logged in successfully',
+      data: getUserDetails,
+    };
   }
 
   @Post('refresh')
