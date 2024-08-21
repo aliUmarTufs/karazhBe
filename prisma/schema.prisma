@@ -14,20 +14,54 @@ datasource db {
 }
 
 model User {
-  id   String @id @default(cuid())
-  username  String   @unique
-  email     String   @unique
-  password  String
-  name      String?
-  industry  String?
-  isVerified Boolean @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String         @id @default(cuid())
+  username       String         @unique
+  email          String         @unique
+  password       String
+  name           String?
+  industry       String?
+  isVerified     Boolean        @default(false)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
   userResetToken PasswordResetToken[]
-  otp       Otp[]
-  Channels Channel[]
-  Posts Post[]
+  otp            Otp[]
+  Channels       Channel[]
+  Posts          Post[]
+  WorkSpaces     UserWorkSpace[]
 }
+
+model WorkSpace {
+  id              String         @id @default(cuid())
+  name            String
+  timeZone        String
+  timeZoneOffset  String?
+  startDay        String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  Users           UserWorkSpace[]
+}
+
+model UserWorkSpace {
+  id          String   @id @default(cuid())
+  userId      String
+  workSpaceId String
+  role        Role
+  user        User     @relation(fields: [userId], references: [id])
+  workSpace   WorkSpace @relation(fields: [workSpaceId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, workSpaceId])
+  @@index([userId])
+  @@index([workSpaceId])
+}
+
+enum Role {
+  CREATOR
+  ADMIN
+  MEMBER
+}
+
 
 model PasswordResetToken {
   id   String @id @default(cuid())
@@ -45,6 +79,8 @@ model Otp {
   expiresAt DateTime
   createdAt DateTime @default(now())
 }
+
+
 
 model Channel {
   id   String @id @default(cuid())

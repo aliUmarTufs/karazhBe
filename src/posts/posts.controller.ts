@@ -8,12 +8,15 @@ import {
   Body,
   Query,
   Logger,
+  UseGuards,
 } from '@nestjs/common';
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { FilterPostsDto } from './dto/filter-posts.dto';
+import { LocalAuthGuard } from 'src/auth/local-auth.guard';
 
+@UseGuards(LocalAuthGuard)
 @Controller('posts')
 export class PostsController {
   private readonly logger = new Logger(PostsController.name);

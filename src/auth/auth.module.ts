@@ -10,6 +10,7 @@ import { UsersService } from 'src/users/users.service';
 // import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtStrategy } from './jwt.strategy';
 import { PassportModule } from '@nestjs/passport';
+import { WorkspacesModule } from 'src/workspaces/workspaces.module';
 
 @Module({
   imports: [
@@ -19,7 +20,7 @@ import { PassportModule } from '@nestjs/passport';
       signOptions: { expiresIn: '3600s' }, // Adjust token expiration as needed
     }),
     UsersModule, // Import any modules that the JWT strategy might need
-
+    WorkspacesModule,
     PrismaModule,
     OtpModule,
   ],

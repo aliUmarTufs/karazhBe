@@ -1,10 +1,22 @@
+{{!-- <html>
+  <head>
+    <meta charset='UTF-8' />
+    <title>OTP Code for Password Reset</title>
+  </head>
+  <body>
+    <p>Dear User,</p>
+    <p>Your OTP code is <strong>{{otp}}</strong>.</p>
+    <p>This code will expire in 10 minutes. If you did not request this, please
+      ignore this email.</p>
+  </body>
+</html> --}}
+
 <html>
   <head>
     <!-- Compiled with Bootstrap Email version: 1.5.1 --><meta
       http-equiv='x-ua-compatible'
       content='ie=edge'
     />
-    <title>Email Verification</title>
     <meta name='x-apple-disable-message-reformatting' />
     <meta name='viewport' content='width=device-width, initial-scale=1' />
     <meta
@@ -233,8 +245,7 @@
                                                 style='line-height: 24px; font-size: 16px; font-weight: 500 !important; width: 100%; margin: 0;'
                                                 align='left'
                                               >
-                                                Someone registered from your
-                                                email account.
+                                                Your OTP code is:
                                               </p>
                                               <table
                                                 class='s-3 w-full'
@@ -301,10 +312,9 @@
                                                         bgcolor='#0d6efd'
                                                       >
                                                         <a
-                                                          href={{url}}
-                                                          target='_blank'
                                                           style='color: #ffffff; font-size: 16px; font-family: Helvetica, Arial, sans-serif; text-decoration: none; border-radius: 6px; line-height: 20px; display: block; font-weight: normal; white-space: nowrap; background-color: #0d6efd; padding: 8px 12px; border: 1px solid #0d6efd;'
-                                                        >Verify Email</a>
+                                                        ><strong
+                                                          >{{otp}}</strong></a>
                                                       </td>
                                                     </tr>
                                                   </tbody>

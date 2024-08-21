@@ -12,12 +12,15 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MailerService } from '../mailer/mailer.service';
 import { AuthDto, profileDto, UserDto } from '../auth/dto/create-auth.dto';
 import { JwtPayload } from './jwt-payload.interface';
+import { WorkspacesService } from 'src/workspaces/workspaces.service';
+import { CreateWorkspaceDto } from 'src/workspaces/dto/create-workspace.dto';
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   constructor(
     private usersService: UsersService,
+    private workspacesService: WorkspacesService,
     private jwtService: JwtService,
     private prisma: PrismaService,
     private otpService: OtpService,
@@ -25,16 +28,40 @@ export class AuthService {
   ) {}
 
   async signUp(authDto: AuthDto) {
+    this.logger.log(
+      `${this.signUp.name} has been called | authDto: ${JSON.stringify(authDto)}`,
+    );
     try {
       const newUserDetails = await this.usersService.create(authDto);
+
       const getTokens = await this.generateTokens(newUserDetails);
+
+      const createWorkspaceDto: CreateWorkspaceDto = {
+        name: `${newUserDetails.username}'s Workspace`, // or any naming convention you prefer
+        timeZone: 'UTC', // Set default timezone, or collect this from the user
+        timeZoneOffset: '0', // Set default timezone offset, or collect this from the user
+        startDay: 'Sunday', // Set default start day, or collect this from the user
+      };
+
+      await this.workspacesService.createWorkSpace(
+        createWorkspaceDto,
+        newUserDetails,
+      );
+
+      const msg = await this.sendEmailVerification({
+        email: newUserDetails.email,
+      });
       return {
         user: newUserDetails,
-        accessToken: getTokens.access_token,
-        refreshToken: getTokens.refresh_token,
+        ...msg,
+        access_token: getTokens.access_token,
+        refresh_token: getTokens.refresh_token,
       };
     } catch (error) {
-      throw new BadRequestException('User already exists');
+      this.logger.error(
+        `${this.signUp.name} got an Error: ${JSON.stringify(error)}`,
+      );
+      throw new BadRequestException(error.message);
     }
   }
 
@@ -62,8 +89,8 @@ export class AuthService {
           email: user.email,
           username: user.username, // Include any other user details you need
         },
-        accessToken: getTokens.access_token,
-        refreshToken: getTokens.refresh_token,
+        access_token: getTokens.access_token,
+        refresh_token: getTokens.refresh_token,
       };
     } catch (error) {
       this.logger.error(error);
@@ -72,20 +99,30 @@ export class AuthService {
   }
 
   async generateTokens(user: any) {
-    const payload: JwtPayload = {
-      email: user.email,
-      sub: user.id,
-      userId: user.id,
-    };
+    this.logger.log(
+      `${this.generateTokens.name} has been called | user: ${JSON.stringify(user)}`,
+    );
+    try {
+      const payload: JwtPayload = {
+        email: user.email,
+        sub: user.id,
+        userId: user.id,
+      };
 
-    // Generate tokens
-    const access_token = this.jwtService.sign(payload, { expiresIn: '15m' }); // Example expiry
-    const refresh_token = this.jwtService.sign(payload, { expiresIn: '7d' }); // Example expiry
+      // Generate tokens
+      const access_token = this.jwtService.sign(payload, { expiresIn: '15m' }); // Example expiry
+      const refresh_token = this.jwtService.sign(payload, { expiresIn: '7d' }); // Example expiry
 
-    return {
-      access_token,
-      refresh_token,
-    };
+      return {
+        access_token,
+        refresh_token,
+      };
+    } catch (error) {
+      this.logger.error(
+        `${this.generateTokens.name} got an Error: ${JSON.stringify(error)}`,
+      );
+      throw new BadRequestException(error.message);
+    }
   }
 
   async refresh(refreshToken: string) {
@@ -142,16 +179,20 @@ export class AuthService {
     };
   }
 
-  async resendOtp(email: string) {
+  async sendOtp(email: string, token: string) {
+    const isValid = await this.jwtService.verify(token);
+    if (!isValid) {
+      throw new UnauthorizedException('Invalid or Expired Token');
+    }
     const user = await this.usersService.findOneByEmail(email);
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
 
-    return this.otpService.generateOtp(email);
+    return await this.otpService.generateOtp(email);
   }
 
-  async forgotPassword(email: string) {
+  async forgetPassword(email: string) {
     const user = await this.usersService.findOneByEmail(email);
     if (!user) {
       throw new UnauthorizedException('User not found');
@@ -202,10 +243,14 @@ export class AuthService {
 
   async sendEmailVerification(user: UserDto) {
     const getUserDetails = await this.usersService.findOneByEmail(user.email);
+    if (getUserDetails.isVerified) {
+      return { message: 'Email is already verified!' };
+    }
     const payload = { email: getUserDetails.email, sub: getUserDetails.id };
     const token = this.jwtService.sign(payload, { expiresIn: '1h' });
 
-    const verificationUrl = `${process.env.APP_URL}/auth/verify-email?token=${token}`;
+    await this.mailerService.sendEmailVerification(user.email, token);
+    // const verificationUrl = `${process.env.APP_URL}/auth/verify-email?token=${token}`;
 
     // await this.mailerService.sendEmailVerification({
     //   to: user.email,
@@ -220,12 +265,24 @@ export class AuthService {
     return { message: 'Verification email sent' };
   }
 
-  verifyEmail() {
+  async verifyEmail(body: { email: string; token: string }) {
     try {
+      const isValid = await this.jwtService.verify(body.token);
+      if (!isValid) {
+        throw new UnauthorizedException('Invalid or Expired Token');
+      }
+      const verifyUser = await this.prisma.user.update({
+        where: {
+          email: body.email,
+        },
+        data: {
+          isVerified: true,
+        },
+      });
       return {
         status: true,
         message: 'Email verified successfully',
-        data: [],
+        data: verifyUser,
       };
     } catch (error) {
       this.logger.error(error);

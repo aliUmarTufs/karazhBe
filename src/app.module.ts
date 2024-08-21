@@ -12,13 +12,12 @@ import { MailerModule } from './mailer/mailer.module';
 import { OtpModule } from './otp/otp.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PostsModule } from './posts/posts.module';
+import { WorkspacesModule } from './workspaces/workspaces.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
-
       isGlobal: true, // Makes the ConfigModule global, so you don't need to import it everywhere
-    
     }),
     AuthModule,
     UsersModule,
@@ -30,7 +29,9 @@ import { PostsModule } from './posts/posts.module';
     MailerModule,
     OtpModule,
     PrismaModule,
-    PostsModule,],
+    PostsModule,
+    WorkspacesModule,
+  ],
   controllers: [AppController],
   providers: [AppService, PrismaService, OtpService, MailerService],
 })

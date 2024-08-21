@@ -1,28 +1,49 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 import { CreateUserDto } from './dto/create-user.dto';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(private prisma: PrismaService) {}
 
   async findOneByEmail(email: string) {
-    return this.prisma.user.findUnique({ where: { email } });
+    this.logger.log(
+      `${this.findOneByEmail.name} has been called | email: ${email}`,
+    );
+    try {
+      return await this.prisma.user.findUnique({ where: { email } });
+    } catch (error) {
+      this.logger.error(
+        `${this.findOneByEmail.name} got an Error: ${JSON.stringify(error)}`,
+      );
+      throw new BadRequestException(error.message);
+    }
   }
 
   async create(userDetails: CreateUserDto) {
-    const uniqueUsername = await this.generateUniqueUsername(
-      userDetails.email.split('@')[0],
+    this.logger.log(
+      `${this.create.name} has been called | userDetails: ${JSON.stringify(userDetails)}`,
     );
-
-    return this.prisma.user.create({
-      data: {
-        email: userDetails.email,
-        password: await this.hashPassword(userDetails.password),
-        username: uniqueUsername,
-      },
-    });
+    try {
+      const uniqueUsername = await this.generateUniqueUsername(
+        userDetails.email.split('@')[0],
+      );
+      return this.prisma.user.create({
+        data: {
+          email: userDetails.email,
+          password: await this.hashPassword(userDetails.password),
+          username: uniqueUsername,
+        },
+      });
+    } catch (error) {
+      this.logger.error(
+        `${this.create.name} got an Error: ${JSON.stringify(error)}`,
+      );
+      throw new BadRequestException(error.message);
+    }
   }
 
   async validateUser(email: string, password: string): Promise<boolean> {
@@ -41,16 +62,27 @@ export class UsersService {
   }
 
   async generateUniqueUsername(name: string): Promise<string> {
-    const baseUsername = this.createBaseUsername(name);
-    let uniqueUsername = baseUsername;
-    let suffix = 1;
+    this.logger.log(
+      `${this.generateUniqueUsername.name} has been called | name: ${name}`,
+    );
 
-    while (await this.usernameExists(uniqueUsername)) {
-      uniqueUsername = `${baseUsername}${suffix}`;
-      suffix++;
+    try {
+      const baseUsername = await this.createBaseUsername(name);
+      let uniqueUsername = baseUsername;
+      let suffix = 1;
+
+      while (await this.usernameExists(uniqueUsername)) {
+        uniqueUsername = `${baseUsername}${suffix}`;
+        suffix++;
+      }
+
+      return uniqueUsername;
+    } catch (error) {
+      this.logger.error(
+        `${this.generateUniqueUsername.name} got an Error: ${JSON.stringify(error)}`,
+      );
+      throw new BadRequestException(error.message);
     }
-
-    return uniqueUsername;
   }
 
   private createBaseUsername(name: string): string {
