@@ -1,5 +1,6 @@
 import { IsEmail, IsNotEmpty, IsString, Length } from 'class-validator';
 
+
 export class AuthDto {
   @IsNotEmpty()
   @IsEmail()
@@ -25,4 +26,9 @@ export class profileDto {
   @IsNotEmpty()
   @IsString()
   industry: string;
+}
+
+export class UploadFileDto {
+  file: Express.Multer.File;
+  directory: string;
 }

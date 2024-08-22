@@ -11,6 +11,8 @@ import { UsersService } from 'src/users/users.service';
 import { JwtStrategy } from './jwt.strategy';
 import { PassportModule } from '@nestjs/passport';
 import { WorkspacesModule } from 'src/workspaces/workspaces.module';
+import { UploadFile } from 'src/aws/uploadfile';
+import { GetFile } from 'src/aws/getfile.service';
 
 @Module({
   imports: [
@@ -23,8 +25,10 @@ import { WorkspacesModule } from 'src/workspaces/workspaces.module';
     WorkspacesModule,
     PrismaModule,
     OtpModule,
+    
   ],
-  providers: [AuthService, MailerService, UsersService, JwtStrategy],
+  providers: [AuthService, MailerService, UsersService, JwtStrategy, UploadFile,
+    GetFile],
   controllers: [AuthController],
 })
 export class AuthModule {}

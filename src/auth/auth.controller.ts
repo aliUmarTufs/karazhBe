@@ -6,15 +6,21 @@ import {
   Res,
   UseGuards,
   Req,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Response } from 'express';
-import { AuthDto, profileDto, UserDto } from '../auth/dto/create-auth.dto';
+import { AuthDto, profileDto, UploadFileDto, UserDto } from '../auth/dto/create-auth.dto';
 import { LocalAuthGuard } from './local-auth.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { UploadFile } from 'src/aws/uploadfile';
+import { GetFile } from 'src/aws/getfile.service';
+
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService, private uploadImage: UploadFile, private getFileSignedUrl: GetFile,) {}
 
   @Post('signup')
   async signUp(@Res() res: Response, @Body() authDto: AuthDto) {
@@ -119,4 +125,53 @@ export class AuthController {
     res.clearCookie('refresh_token');
     return res.json({ message: 'Logged out successfully' });
   }
+
+  @Post('uploadImage')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadImg(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() data: UploadFileDto,
+  ) {
+    try {
+      const check = await this.authService.getFileExtension(file.originalname);
+      if (
+        // check !== 'jpg' &&
+        // check !== 'png' &&
+        // check !== 'jpeg' &&
+        // check !== 'pdf' &&
+        // check !== 'zip' &&
+        // check !== 'docx'
+        check !== 'pdf' &&
+        check !== 'zip' &&
+        check !== 'docx' &&
+        check !== 'doc' &&
+        check !== 'odt' &&
+        check !== 'txt' &&
+        check !== 'rtf' &&
+        check !== 'wps' &&
+        check !== 'wkf' &&
+        check !== 'wks' &&
+        check !== 'wpd' &&
+        check !== 'png' &&
+        check !== 'PNG' &&
+        check !== 'jpg' &&
+        check !== 'jpeg' &&
+        check !== 'ppt' &&
+        check !== 'pptx' &&
+        check !== 'xls' &&
+        check !== 'svg' &&
+        check !== 'xlsx' &&
+        check !== 'tex'
+      ) {
+        return {
+          status: false,
+          message: 'invalid file',
+        };
+      }
+      return await this.uploadImage.uploadImg(file, data.directory);
+    } catch (error) {
+      console.error('Failed to fetch the image:', error.message);
+    }
+  }
+
 }

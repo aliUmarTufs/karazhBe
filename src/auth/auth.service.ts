@@ -289,4 +289,9 @@ export class AuthService {
       throw new BadRequestException('Unable to verify email address');
     }
   }
+
+  getFileExtension(filename: any) {
+    const extension = filename.split('.').pop();
+    return extension;
+  }
 }
