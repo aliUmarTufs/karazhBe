@@ -25,10 +25,15 @@ import { GetFile } from 'src/aws/getfile.service';
     WorkspacesModule,
     PrismaModule,
     OtpModule,
-    
   ],
-  providers: [AuthService, MailerService, UsersService, JwtStrategy, UploadFile,
-    GetFile],
+  providers: [
+    AuthService,
+    MailerService,
+    UsersService,
+    JwtStrategy,
+    UploadFile,
+    GetFile,
+  ],
   controllers: [AuthController],
 })
 export class AuthModule {}
