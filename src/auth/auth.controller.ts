@@ -11,16 +11,24 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Response } from 'express';
-import { AuthDto, profileDto, UploadFileDto, UserDto } from '../auth/dto/create-auth.dto';
+import {
+  AuthDto,
+  profileDto,
+  UploadFileDto,
+  UserDto,
+} from '../auth/dto/create-auth.dto';
 import { LocalAuthGuard } from './local-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UploadFile } from 'src/aws/uploadfile';
 import { GetFile } from 'src/aws/getfile.service';
 
-
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService, private uploadImage: UploadFile, private getFileSignedUrl: GetFile,) {}
+  constructor(
+    private authService: AuthService,
+    private uploadImage: UploadFile,
+    private getFileSignedUrl: GetFile,
+  ) {}
 
   @Post('signup')
   async signUp(@Res() res: Response, @Body() authDto: AuthDto) {
@@ -90,14 +98,14 @@ export class AuthController {
   }
 
   @Post('verify-otp')
-  async verifyOtp(@Body() body: { email: string; token: string }) {
-    return this.authService.verifyOtp(body.email, body.token);
+  async verifyOtp(@Body() body: { email: string; otp: string }) {
+    return this.authService.verifyOtp(body.email, body.otp);
   }
 
   @UseGuards(LocalAuthGuard)
   @Post('reset-password')
-  async resetPassword(@Body() body: { token: string; newPassword: string }) {
-    return this.authService.resetPassword(body.token, body.newPassword);
+  async resetPassword(@Body() body: { email: string; newPassword: string }) {
+    return this.authService.resetPassword(body.email, body.newPassword);
   }
 
   @Post('refresh')
@@ -133,7 +141,7 @@ export class AuthController {
     @Body() data: UploadFileDto,
   ) {
     try {
-      const check = await this.authService.getFileExtension(file.originalname);
+      const check = await this.uploadImage.getFileExtension(file.originalname);
       if (
         // check !== 'jpg' &&
         // check !== 'png' &&
@@ -174,4 +182,20 @@ export class AuthController {
     }
   }
 
+  @Post('getSignedUrl')
+  async getImg(@Body() body: { key: string }) {
+    try {
+      return await this.getFileSignedUrl.get_s3(body.key);
+    } catch (error) {
+      console.error('Failed to fetch the image:', error.message);
+    }
+  }
+
+  @UseGuards(LocalAuthGuard)
+  @Post('create-channel')
+  async createChannel(
+    @Body() body: { name: string; userId: string; workSpaceId: string },
+  ) {
+    return await this.authService.createChannel(body);
+  }
 }
