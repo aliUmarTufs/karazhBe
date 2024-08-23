@@ -24,6 +24,7 @@ export class PostsService {
         const createIdeaDto: CreateIdeaDto = {
           content: createPostDto.content,
           media: createPostDto.media,
+          mediaUrl: createPostDto.mediaUrl,
           userId: createPostDto.userId,
           workSpaceId: createPostDto.workSpaceId,
           status: createPostDto.status,
@@ -130,13 +131,20 @@ export class PostsService {
       `${this.getPosts.name} has been called | filterPostsDto: ${JSON.stringify(filterPostsDto)}`,
     );
     try {
-      const { status, channelId, startDate, endDate, userId, workSpaceId } =
-        filterPostsDto;
+      const {
+        status,
+        channelId,
+        startDate,
+        endDate,
+        userId,
+        workSpaceId,
+        isContent,
+      } = filterPostsDto;
       const where = {
         userId,
         workSpaceId,
         AND: [
-          status === 'ALL'
+          status === 'ALL' && !isContent
             ? {
                 status: {
                   not: {
@@ -144,7 +152,21 @@ export class PostsService {
                   },
                 },
               }
-            : { status: status as PostStatus }, // Correctly cast the status to the enum type
+            : status === 'DRAFT' && !isContent
+              ? {
+                  status: status as PostStatus,
+                  scheduledAt: {
+                    not: {
+                      equals: null,
+                    },
+                  },
+                }
+              : (status === 'DRAFT' || status === 'IDEA') && isContent
+                ? {
+                    status: status as PostStatus,
+                    scheduledAt: null,
+                  }
+                : { status: status as PostStatus },
           channelId === 'ALL' ? {} : { channelId },
           startDate && endDate
             ? {
