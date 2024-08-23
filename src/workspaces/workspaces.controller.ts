@@ -16,10 +16,11 @@ export class WorkspacesController {
     return this.workspacesService.getUserWorkSpaces(userId);
   }
 
-  // @Get(':id')
-  // findOne(@Param('id') id: string) {
-  //   return this.workspacesService.findOne(+id);
-  // }
+  @UseGuards(LocalAuthGuard)
+  @Get('get/:id')
+  async findOne(@Param('id') id: string) {
+    return await this.workspacesService.findOne(id);
+  }
 
   // @Patch(':id')
   // update(

@@ -76,9 +76,34 @@ export class WorkspacesService {
     }
   }
 
-  // findOne(id: number) {
-  //   return `This action returns a #${id} workspace`;
-  // }
+  async findOne(id: string) {
+    this.logger.log(`${this.findOne.name} has been called | id: ${id}`);
+    try {
+      const getWorkSpace = await this.prisma.workSpace.findUnique({
+        where: { id: id },
+        include: {
+          Channel: true,
+          Users: true,
+          Post: true,
+        },
+      });
+
+      return {
+        status: true,
+        message: 'WorkSpace Fetched Succesfully',
+        data: getWorkSpace,
+      };
+    } catch (error) {
+      this.logger.error(
+        `${this.findOne.name} has an error | error: ${JSON.stringify(error)}`,
+      );
+      return {
+        status: false,
+        message: error.message,
+        error,
+      };
+    }
+  }
 
   // update(id: number, updateWorkspaceDto: UpdateWorkspaceDto) {
   //   return `This action updates a #${id} workspace`;
