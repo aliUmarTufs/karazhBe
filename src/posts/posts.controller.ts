@@ -9,12 +9,14 @@ import {
   Query,
   Logger,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { FilterPostsDto } from './dto/filter-posts.dto';
 import { LocalAuthGuard } from 'src/auth/local-auth.guard';
+import { MediaInterceptor } from 'src/interceptors/media.interceptor';
 
 @UseGuards(LocalAuthGuard)
 @Controller('posts')
@@ -22,6 +24,7 @@ export class PostsController {
   private readonly logger = new Logger(PostsController.name);
   constructor(private readonly postsService: PostsService) {}
 
+  @UseInterceptors(MediaInterceptor)
   @Post()
   async createPost(
     @Body() createPostDto: CreatePostDto,
@@ -34,6 +37,7 @@ export class PostsController {
     return this.postsService.createPost(createPostDto, channelName);
   }
 
+  @UseInterceptors(MediaInterceptor)
   @Patch(':id')
   async updatePost(
     @Param('id') id: string,
@@ -52,6 +56,7 @@ export class PostsController {
     return this.postsService.deletePost(id);
   }
 
+  @UseInterceptors(MediaInterceptor)
   @Get()
   async getPosts(@Query() filterPostsDto: FilterPostsDto) {
     this.logger.log(
@@ -60,6 +65,7 @@ export class PostsController {
     return this.postsService.getPosts(filterPostsDto);
   }
 
+  @UseInterceptors(MediaInterceptor)
   @Get(':id')
   async getPostById(@Param('id') id: string) {
     this.logger.log(`${this.getPostById.name} has been called | id: ${id}`);
