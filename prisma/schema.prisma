@@ -39,6 +39,10 @@ model WorkSpace {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   Users           UserWorkSpace[]
+
+  Post Post[]
+
+  Channel Channel[]
 }
 
 model UserWorkSpace {
@@ -88,6 +92,7 @@ model Channel {
   authToken String
   userId    String
   workSpaceId String
+  workSpace    WorkSpace  @relation(fields: [workSpaceId], references: [id])
   user      User     @relation(fields: [userId], references: [id])
   posts     Post[]
 }
@@ -96,6 +101,7 @@ model Post {
   id   String @id @default(cuid())
   content      String
   media        Json
+  mediaUrl String
   status     PostStatus
   scheduledAt  DateTime?
   createdAt    DateTime  @default(now())
@@ -103,6 +109,7 @@ model Post {
   userId       String
   channelId  String?
   workSpaceId String
+  workSpace    WorkSpace  @relation(fields: [workSpaceId], references: [id])
   user         User      @relation(fields: [userId], references: [id])
   channel    Channel?   @relation(fields: [channelId], references: [id])
 }
