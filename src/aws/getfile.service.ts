@@ -1,8 +1,8 @@
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Injectable } from '@nestjs/common';
-import * as AWS from 'aws-sdk';
-import { v4 as uuidv4 } from 'uuid';
+// import * as AWS from 'aws-sdk';
+// import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class GetFile {

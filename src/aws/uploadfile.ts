@@ -1,6 +1,6 @@
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { Injectable } from '@nestjs/common';
-import * as AWS from 'aws-sdk';
+// import * as AWS from 'aws-sdk';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -8,7 +8,7 @@ export class UploadFile {
   //AWS_S3_BUCKET = process.env.AWS_S3_BUCKET;
   async uploadImg(file, folder) {
     const { originalname } = file;
-    const fileType = this.getFileExtension(originalname);
+    const fileType = await this.getFileExtension(originalname);
     const res = await this.s3_upload(
       file.buffer,
       fileType,
@@ -21,9 +21,9 @@ export class UploadFile {
     return res;
   }
 
-  getFileExtension(filename) {
+  async getFileExtension(filename) {
     // get file extension
-    const extension = filename.split('.').pop();
+    const extension = await filename.split('.').pop();
     return extension;
   }
 
