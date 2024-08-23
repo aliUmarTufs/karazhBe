@@ -228,9 +228,9 @@ export class AuthService {
     };
   }
 
-  async resetPassword(token: string, newPassword: string) {
-    const payload = this.jwtService.verify(token);
-    const user = await this.usersService.findOneByEmail(payload.email);
+  async resetPassword(email: string, newPassword: string) {
+    // const payload = this.jwtService.verify(token);
+    const user = await this.usersService.findOneByEmail(email);
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
@@ -290,8 +290,58 @@ export class AuthService {
     }
   }
 
-  getFileExtension(filename: any) {
-    const extension = filename.split('.').pop();
+  async getFileExtension(filename: any) {
+    const extension = await filename.split('.').pop();
     return extension;
+  }
+
+  async createChannel(body) {
+    this.logger.log(
+      `${this.createChannel.name} has been called | body: ${JSON.stringify(body)}`,
+    );
+    try {
+      const { userId, workSpaceId, name } = body;
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      }
+      const workspace = await this.prisma.workSpace.findFirst({
+        where: { id: workSpaceId },
+        include: {
+          Channel: true,
+        },
+      });
+      if (!workspace) {
+        throw new UnauthorizedException('Workspace not found');
+      }
+      const existingChannel = workspace.Channel.find((c) => c?.name === name);
+      if (existingChannel) {
+        throw new BadRequestException('Channel already exists');
+      }
+      const newChannel = await this.prisma.channel.create({
+        data: {
+          name: name,
+          workSpaceId: workspace.id,
+          userId: user.id,
+          authToken: 'test',
+        },
+      });
+      return {
+        status: true,
+        message: 'Channel created successfully',
+        data: newChannel,
+      };
+    } catch (error) {
+      this.logger.error(
+        `${this.createChannel.name} got an Error: ${JSON.stringify(error)}`,
+      );
+      return {
+        status: false,
+        message: error.message,
+        error: null,
+      };
+    }
   }
 }
