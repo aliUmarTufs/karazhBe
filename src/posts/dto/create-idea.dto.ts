@@ -8,6 +8,10 @@ export class CreateIdeaDto {
   @IsNotEmpty()
   media: any; // Assuming media is stored in a JSON format
 
+  @IsString()
+  @IsNotEmpty()
+  mediaUrl: string; // Single channel ID
+
   @IsEnum(PostStatus)
   status: PostStatus;
 

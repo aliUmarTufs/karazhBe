@@ -4,6 +4,7 @@ import {
   IsDate,
   IsString,
   IsNotEmpty,
+  IsBoolean,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PostStatus } from '@prisma/client';
@@ -11,12 +12,17 @@ import { PostStatus } from '@prisma/client';
 export class FilterPostsDto {
   @IsOptional()
   @IsEnum(PostStatus)
-  status: PostStatus;
+  status?: PostStatus;
 
   @IsOptional()
   @IsString()
   @Type(() => String)
   channelId?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  isContent?: boolean;
 
   @IsOptional()
   @IsString()
