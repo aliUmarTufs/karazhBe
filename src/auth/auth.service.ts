@@ -32,6 +32,10 @@ export class AuthService {
       `${this.signUp.name} has been called | authDto: ${JSON.stringify(authDto)}`,
     );
     try {
+      const checkIfUserExists = await this.usersService.findOneByEmail(authDto.email)
+      if (checkIfUserExists) {
+        throw new BadRequestException('User already exists');
+      }
       const newUserDetails = await this.usersService.create(authDto);
 
       const getTokens = await this.generateTokens(newUserDetails);
