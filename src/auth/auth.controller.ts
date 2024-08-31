@@ -84,9 +84,9 @@ export class AuthController {
   }
 
   @Post('send-otp')
-  async sendOtp(@Body() body: { email: string; token: string }) {
+  async sendOtp(@Body() body: { token: string }) {
     try {
-      await this.authService.sendOtp(body.email, body.token);
+      await this.authService.sendOtp(body.token);
       return { status: true, message: 'OTP has been sent to your email' };
     } catch (error) {
       return {

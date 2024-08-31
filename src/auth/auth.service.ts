@@ -189,11 +189,13 @@ export class AuthService {
     };
   }
 
-  async sendOtp(email: string, token: string) {
+  async sendOtp(token: string) {
     const isValid = await this.jwtService.verify(token);
     if (!isValid) {
       throw new UnauthorizedException('Invalid or Expired Token');
     }
+
+    const { sub: userId, email } = isValid;
     const user = await this.usersService.findOneByEmail(email);
     if (!user) {
       throw new UnauthorizedException('User not found');
@@ -278,12 +280,16 @@ export class AuthService {
   async verifyEmail(body: { email: string; token: string }) {
     try {
       const isValid = await this.jwtService.verify(body.token);
+
       if (!isValid) {
         throw new UnauthorizedException('Invalid or Expired Token');
       }
+
+      const { sub: userId, email } = isValid;
+
       const verifyUser = await this.prisma.user.update({
         where: {
-          email: body.email,
+          id: userId,
         },
         data: {
           isVerified: true,
