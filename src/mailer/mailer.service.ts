@@ -97,7 +97,7 @@ export class MailerService {
       template: 'resetPassword', // Refers to the template name (verifyEmail.hbs)
       context: {
         token,
-        url: `${process.env.FRONTEND_URL}/reset-password?token=${token}`,
+        url: `${process.env.FRONTEND_URL}/confirm-otp?token=${token}`,
       },
     };
 
