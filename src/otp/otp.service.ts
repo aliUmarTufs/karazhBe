@@ -12,7 +12,7 @@ export class OtpService {
   ) {}
 
   async generateOtp(email: string) {
-    const otp = otpGenerator.generate(6, {
+    const otp = otpGenerator.generate(4, {
       upperCase: false,
       specialChars: false,
     });
