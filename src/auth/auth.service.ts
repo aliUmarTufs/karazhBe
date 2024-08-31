@@ -114,7 +114,7 @@ export class AuthService {
       };
 
       // Generate tokens
-      const access_token = this.jwtService.sign(payload, { expiresIn: '15m' }); // Example expiry
+      const access_token = this.jwtService.sign(payload, { expiresIn: '7d' }); // Example expiry
       const refresh_token = this.jwtService.sign(payload, { expiresIn: '7d' }); // Example expiry
 
       return {
