@@ -102,7 +102,6 @@ export class AuthController {
     return this.authService.verifyOtp(body.email, body.otp);
   }
 
-  @UseGuards(LocalAuthGuard)
   @Post('reset-password')
   async resetPassword(@Body() body: { email: string; newPassword: string }) {
     return this.authService.resetPassword(body.email, body.newPassword);
