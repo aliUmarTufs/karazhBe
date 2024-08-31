@@ -109,18 +109,20 @@ export class AuthController {
   }
 
   @Post('refresh')
-  async refresh(@Request() req, @Res() res: Response) {
-    const refreshToken = req.cookies['refresh_token'];
-    const { access_token, refresh_token } =
-      await this.authService.refresh(refreshToken);
-    res.cookie('refresh_token', refresh_token, {
-      httpOnly: true,
-      // secure: true,
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+async refresh(@Body('refreshToken') refreshToken: string, @Res() res: Response) {
+  try {
+    const { access_token, refresh_token } = await this.authService.refresh(refreshToken);
+
+    // Send the new refresh token in the response
+    return res.json({
+      access_token,
+      refresh_token,
     });
-    return res.json({ access_token });
+  } catch (error) {
+    return res.status(401).json({ message: 'Invalid or expired refresh token' });
   }
+}
+
 
   @UseGuards(LocalAuthGuard)
   @Post('update-profile')

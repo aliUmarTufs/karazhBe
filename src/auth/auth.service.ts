@@ -92,6 +92,7 @@ export class AuthService {
           id: user.id,
           email: user.email,
           username: user.username, // Include any other user details you need
+          isVerified: user.isVerified,
         },
         access_token: getTokens.access_token,
         refresh_token: getTokens.refresh_token,
@@ -130,22 +131,27 @@ export class AuthService {
   }
 
   async refresh(refreshToken: string) {
-    const payload = this.jwtService.verify(refreshToken);
-    const user = await this.usersService.findOneByEmail(payload.email);
-    if (!user) {
-      throw new UnauthorizedException();
+    try {
+      const payload = this.jwtService.verify(refreshToken);
+      const user = await this.usersService.findOneByEmail(payload.email);
+      if (!user) {
+        throw new UnauthorizedException();
+      }
+      return {
+        access_token: this.jwtService.sign(
+          { email: user.email, sub: user.id },
+          { expiresIn: '1d' },
+        ),
+        refresh_token: this.jwtService.sign(
+          { email: user.email, sub: user.id },
+          { expiresIn: '7d' },
+        ),
+      };
+    } catch (error) {
+      throw new UnauthorizedException('Invalid refresh token');
     }
-    return {
-      access_token: this.jwtService.sign(
-        { email: user.email, sub: user.id },
-        { expiresIn: '15m' },
-      ),
-      refresh_token: this.jwtService.sign(
-        { email: user.email, sub: user.id },
-        { expiresIn: '7d' },
-      ),
-    };
   }
+  
 
   async verifyOtp(email: string, token: string) {
     const isValid = await this.otpService.verifyOtp(email, token);

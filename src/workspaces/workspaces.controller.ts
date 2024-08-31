@@ -1,4 +1,4 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Req, UseGuards } from '@nestjs/common';
 import { WorkspacesService } from './workspaces.service';
 import { LocalAuthGuard } from 'src/auth/local-auth.guard';
 
@@ -11,9 +11,9 @@ export class WorkspacesController {
   //   return this.workspacesService.create(createWorkspaceDto);
   // }
   @UseGuards(LocalAuthGuard)
-  @Get(':userId')
-  async getUserWorkSpaces(@Param('userId') userId: string) {
-    return this.workspacesService.getUserWorkSpaces(userId);
+  @Get()
+  async getUserWorkSpaces(@Req() req) {
+    return this.workspacesService.getUserWorkSpaces(req.user.userId);
   }
 
   @UseGuards(LocalAuthGuard)
