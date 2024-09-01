@@ -178,7 +178,15 @@ export class AuthController {
         check !== 'xls' &&
         check !== 'svg' &&
         check !== 'xlsx' &&
-        check !== 'tex'
+        check !== 'tex' &&
+        check !== 'mp4' && // Allow .mp4 files
+        check !== 'flv' && // Allow .flv files
+        check !== 'wmv' && // Allow .wmv files
+        check !== 'avi' && // Allow .avi files
+        check !== 'mov' && // Allow .mov files
+        check !== '3gp' && // Allow .3gp files
+        check !== 'ts' && // Allow .ts files
+        check !== 'm3u8' // Allow .m3u8 files
       ) {
         return {
           status: false,

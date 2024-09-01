@@ -13,7 +13,7 @@ import { PostStatus } from '@prisma/client';
 import { CreateIdeaDto } from './dto/create-idea.dto';
 import { UpdateIdeaDto } from './dto/update-idea.dto';
 import { FilterContentDto } from './dto/filter-content.dto';
-import {SocialMediaPlatform } from 'src/enum/SocialMediaPlatform'
+import { SocialMediaPlatform } from 'src/enum/SocialMediaPlatform';
 
 @Injectable()
 export class PostsService {
@@ -51,64 +51,6 @@ export class PostsService {
     }
   }
 
-  // async createPost(
-  //   createPostDto: CreatePostDto,
-  //   channelName?: string | null | undefined,
-  // ) {
-  //   this.logger.log(
-  //     `${this.createPost.name} has been called | createPostDto: ${JSON.stringify(createPostDto)}`,
-  //   );
-  //   try {
-  //     let createPost;
-  //     if (createPostDto.status === PostStatus.IDEA) {
-  //       const createIdeaDto: CreateIdeaDto = {
-  //         content: createPostDto.content,
-  //         media: createPostDto.media,
-  //         mediaUrl: createPostDto.mediaUrl,
-  //         userId: createPostDto.userId,
-  //         workSpaceId: createPostDto.workSpaceId,
-  //         status: createPostDto.status,
-  //       };
-  //       createPost = await this.prisma.post.create({
-  //         data: {
-  //           ...createIdeaDto,
-  //         },
-  //       });
-  //     } else {
-  //       if (
-  //         (channelName !== undefined || channelName !== null) &&
-  //         (channelName === 'tiktok' || channelName === 'instagram') &&
-  //         Object.keys(createPostDto.media).length === 0
-  //       ) {
-  //         throw new BadRequestException(
-  //           'Error: Media Should not be Empty for Tiktok/Instagram',
-  //         );
-  //       }
-  //       createPost = await this.prisma.post.create({
-  //         data: {
-  //           ...createPostDto,
-  //         },
-  //       });
-  //     }
-
-  //     return {
-  //       status: true,
-  //       message: `Your ${createPostDto.status === 'IDEA' ? 'idea' : 'post'} has been created!`,
-  //       data: createPost,
-  //     };
-  //   } catch (error) {
-  //     this.logger.error(
-  //       `${this.createPost.name} has an error | error: ${JSON.stringify(error)}`,
-  //     );
-
-  //     return {
-  //       status: false,
-  //       message: error.message,
-  //       error,
-  //     };
-  //   }
-  // }
-
   async createPost(createPostDto: CreatePostDto) {
     this.logger.log(
       `${this.createPost.name} has been called | createPostDto: ${JSON.stringify(createPostDto)}`,
@@ -129,7 +71,8 @@ export class PostsService {
           channelNames &&
           (channelNames.includes(SocialMediaPlatform.TIKTOK) ||
             channelNames.includes(SocialMediaPlatform.INSTAGRAM)) &&
-          createPostDto.mediaUrl === null
+          (createPostDto?.mediaUrl === null ||
+            createPostDto?.mediaUrl === undefined)
         ) {
           throw new BadRequestException(
             'Error: Media should not be empty for Tiktok/Instagram',
@@ -218,8 +161,8 @@ export class PostsService {
 
     try {
       // Step 1: Check if the post exists
-      const existingPost = await this.prisma.post.findUnique({
-        where: { id: postId },
+      const existingPost = await this.prisma.post.findFirst({
+        where: { id: postId, deletedAt: null },
       });
 
       if (!existingPost) {
@@ -362,14 +305,27 @@ export class PostsService {
       `${this.deletePost.name} has been called | postId:${postId}`,
     );
     try {
-      const deletePost = await this.prisma.post.delete({
-        where: { id: postId },
-      });
+      const [deletePost, deletePostChannel] = await this.prisma.$transaction([
+        this.prisma.post.update({
+          where: { id: postId },
+          data: { deletedAt: new Date() }, // Set the deletedAt field to the current date
+        }),
+        this.prisma.post.delete({
+          where: { id: postId },
+        }),
+      ]);
+
+      this.logger.debug(
+        `deletePost: ${JSON.stringify(deletePost)}, deletePostChannel: ${JSON.stringify(deletePostChannel)}`,
+      );
 
       return {
         status: true,
         message: 'Post deleted successfully',
-        data: deletePost,
+        data: {
+          id: deletePost.id,
+          deletedAt: deletePost.deletedAt,
+        },
       };
     } catch (error) {
       this.logger.error(
@@ -389,14 +345,18 @@ export class PostsService {
       `${this.deleteIdea.name} has been called | ideaId:${ideaId}`,
     );
     try {
-      const deleteIdea = await this.prisma.post.delete({
+      const deleteIdea = await this.prisma.post.update({
         where: { id: ideaId },
+        data: { deletedAt: new Date() }, // Set the deletedAt field to the current date
       });
-
+      this.logger.debug(`deleteIdea: ${JSON.stringify(deleteIdea)}}`);
       return {
         status: true,
         message: 'Idea deleted successfully',
-        data: deleteIdea,
+        data: {
+          id: deleteIdea.id,
+          deletedAt: deleteIdea.deletedAt,
+        },
       };
     } catch (error) {
       this.logger.error(
@@ -422,6 +382,7 @@ export class PostsService {
       const where = {
         userId,
         workSpaceId,
+        deletedAt: null,
         AND: [
           status === 'ALL'
             ? {
@@ -525,72 +486,32 @@ export class PostsService {
     );
     try {
       const { userId, workSpaceId } = filterContentDto;
-      const { limit = 20, offset = 0 } = filterContentDto;
-      const where = {
-        userId,
-        workSpaceId,
-      };
+      const { limit, offset } = filterContentDto;
 
       const ideasForContent = await this.prisma.post.findMany({
         where: {
-          ...where,
+          userId,
+          workSpaceId,
           status: PostStatus.IDEA,
           scheduledAt: null,
+          deletedAt: null,
         },
-        take: limit,
-        skip: offset,
+        take: limit > 0 ? limit : 20,
+        skip: offset > 0 ? offset : 0,
         orderBy: { createdAt: 'desc' },
       });
 
-      ideasForContent.map((idea) => {
-        idea['mediaKey'] = idea.mediaUrl;
-      })
-
-      // const draftsForContent = await this.prisma.post.findMany({
-      //   where: {
-      //     ...where,
-      //     status: PostStatus.DRAFT,
-      //     scheduledAt: null,
-      //   },
-      //   include: {
-      //     channels: {
-      //       include: {
-      //         channel: true,
-      //       },
-      //     },
-      //   },
-      //   take: limit,
-      //   skip: offset,
-      //   orderBy: { createdAt: 'desc' },
-      // });
-
-      // const draftResult = [];
-      // if (draftsForContent.length > 0) {
-      //   for (const post of draftsForContent) {
-      //     const channelData = post.channels.map((channel) => channel.channel);
-
-      //     const postData = {
-      //       id: post.id,
-      //       content: post.content,
-      //       mediaUrl: post.mediaUrl,
-      //       status: post.status,
-      //       scheduledAt: post.scheduledAt,
-      //       createdAt: post.createdAt,
-      //       updatedAt: post.updatedAt,
-      //       userId: post.userId,
-      //       workSpaceId: post.workSpaceId,
-      //       channels: channelData,
-      //     };
-      //     draftResult.push(postData);
-      //   }
-      // }
+      await Promise.all(
+        ideasForContent.map((idea) => {
+          idea['mediaKey'] = idea.mediaUrl;
+        }),
+      );
 
       return {
         status: true,
         message: 'Content fetched by filter successfully',
         data: ideasForContent,
-        count: ideasForContent.length
-        
+        count: ideasForContent.length,
       };
     } catch (error) {
       this.logger.error(
@@ -611,28 +532,15 @@ export class PostsService {
     );
     try {
       const { userId, workSpaceId } = filterContentDto;
-      const { limit = 20, offset = 0 } = filterContentDto;
-      const where = {
-        userId,
-        workSpaceId,
-      };
-
-      // const ideasForContent = await this.prisma.post.findMany({
-      //   where: {
-      //     ...where,
-      //     status: PostStatus.IDEA,
-      //     scheduledAt: null,
-      //   },
-      //   take: limit,
-      //   skip: offset,
-      //   orderBy: { createdAt: 'desc' },
-      // });
+      const { limit, offset } = filterContentDto;
 
       const draftsForContent = await this.prisma.post.findMany({
         where: {
-          ...where,
+          userId,
+          workSpaceId,
           status: PostStatus.DRAFT,
           scheduledAt: null,
+          deletedAt: null,
         },
         include: {
           channels: {
@@ -641,8 +549,8 @@ export class PostsService {
             },
           },
         },
-        take: limit,
-        skip: offset,
+        take: limit > 0 ? limit : 20,
+        skip: offset > 0 ? offset : 0,
         orderBy: { createdAt: 'desc' },
       });
 
@@ -655,6 +563,7 @@ export class PostsService {
             id: post.id,
             content: post.content,
             mediaUrl: post.mediaUrl,
+            mediaKey: post.mediaUrl,
             status: post.status,
             scheduledAt: post.scheduledAt,
             createdAt: post.createdAt,
