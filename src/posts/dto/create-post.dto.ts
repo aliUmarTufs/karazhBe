@@ -4,20 +4,19 @@ import {
   IsDate,
   IsString,
   IsOptional,
+  IsArray,
 } from 'class-validator';
 import { PostStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
 
 export class CreatePostDto {
   @IsNotEmpty()
+  @IsString()
   content: string;
 
-  @IsNotEmpty()
-  media: any; // Assuming media is stored in a JSON format
-
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  mediaUrl: string; // Single channel ID
+  mediaUrl?: string; // Single channel ID
 
   @IsEnum(PostStatus)
   status: PostStatus;
@@ -28,8 +27,9 @@ export class CreatePostDto {
   scheduledAt?: Date;
 
   @IsOptional()
-  @IsString()
-  channelId?: string; // Single channel ID
+  @IsArray()
+  @Type(() => Array) // This line will transform the incoming string to a Date object
+  channelsArray?: [{ name: string; id: string }]; // Single channel ID
 
   @IsString()
   @IsNotEmpty()

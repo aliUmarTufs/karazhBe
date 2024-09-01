@@ -17,9 +17,9 @@ export class WorkspacesController {
   }
 
   @UseGuards(LocalAuthGuard)
-  @Get('get/:id')
-  async findOne(@Param('id') id: string) {
-    return await this.workspacesService.findOne(id);
+  @Get('get-details/:workspaceId')
+  async findOne(@Param('workspaceId') workspaceId: string, @Req() req) {
+    return await this.workspacesService.findOne(workspaceId, req.user);
   }
 
   // @Patch(':id')

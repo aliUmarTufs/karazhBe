@@ -4,43 +4,38 @@ import {
   IsDate,
   IsString,
   IsNotEmpty,
-  IsBoolean,
+  IsArray,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PostStatus } from '@prisma/client';
 
 export class FilterPostsDto {
-  @IsOptional()
+  @IsNotEmpty()
   @IsEnum(PostStatus)
-  status?: PostStatus;
+  status: PostStatus;
 
   @IsOptional()
-  @IsString()
-  @Type(() => String)
-  channelId?: string;
+  @IsArray()
+  @Type(() => Array<string>)
+  channelIds?: string[];
 
-  @IsOptional()
-  @IsBoolean()
-  @Type(() => Boolean)
-  isContent?: boolean;
-
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
   @Type(() => String)
   workSpaceId: string;
 
-  @IsString()
   @IsNotEmpty()
+  @IsString()
   @Type(() => String)
   userId: string; // Single user ID
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsDate()
   @Type(() => Date)
-  startDate?: Date;
+  startDate: Date;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsDate()
   @Type(() => Date)
-  endDate?: Date;
+  endDate: Date;
 }

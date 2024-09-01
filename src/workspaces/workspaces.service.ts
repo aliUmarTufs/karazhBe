@@ -1,6 +1,7 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { JwtPayload } from 'jsonwebtoken';
 
 @Injectable()
 export class WorkspacesService {
@@ -76,22 +77,38 @@ export class WorkspacesService {
     }
   }
 
-  async findOne(id: string) {
-    this.logger.log(`${this.findOne.name} has been called | id: ${id}`);
+  async findOne(workspaceId: string, user: JwtPayload) {
+    this.logger.log(
+      `${this.findOne.name} has been called | workspaceId: ${workspaceId}`,
+    );
     try {
-      const getWorkSpace = await this.prisma.workSpace.findUnique({
-        where: { id: id },
-        include: {
-          Channel: true,
-          Users: true,
-          Post: true,
-        },
+      const { userId } = user;
+
+      const userDetails = await this.prisma.user.findUnique({
+        where: { id: userId },
       });
+
+      if (!userDetails) {
+        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+      }
+
+      const getWorkSpace = await this.prisma.workSpace.findUnique({
+        where: { id: workspaceId },
+      });
+
+      if (!getWorkSpace) {
+        throw new HttpException('WorkSpace not found', HttpStatus.NOT_FOUND);
+      }
+
+      const profileDetails = {
+        workspace: getWorkSpace,
+        user: userDetails,
+      };
 
       return {
         status: true,
         message: 'WorkSpace Fetched Succesfully',
-        data: getWorkSpace,
+        data: profileDetails,
       };
     } catch (error) {
       this.logger.error(

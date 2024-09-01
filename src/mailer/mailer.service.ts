@@ -2,20 +2,14 @@ import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import * as hbs from 'nodemailer-express-handlebars';
 import { join } from 'path';
+import * as fs from 'fs'; // Import fs to check file existence
+
 @Injectable()
 export class MailerService {
   private readonly logger = new Logger(MailerService.name);
   private transporter: nodemailer.Transporter;
 
   constructor() {
-    // this.transporter = nodemailer.createTransport({
-    //   service: 'gmail', // or any other email service
-    //   auth: {
-    //     user: process.env.EMAIL_USER,
-    //     pass: process.env.EMAIL_PASS,
-    //   },
-    // });
-
     this.transporter = nodemailer.createTransport({
       host: 'sandbox.smtp.mailtrap.io',
       port: 2525,
@@ -24,15 +18,24 @@ export class MailerService {
         pass: process.env.MAIL_PASS,
       },
     });
+
+    const templatesPath = join(__dirname, 'templates');
+    this.logger.log(`Templates directory path: ${templatesPath}`);
+
+    if (!fs.existsSync(templatesPath)) {
+      this.logger.error(`Templates directory not found: ${templatesPath}`);
+      throw new Error(`Templates directory not found: ${templatesPath}`);
+    }
+
     this.transporter.use(
       'compile',
       hbs({
         viewEngine: {
           extname: '.hbs',
-          layoutsDir: join(__dirname, '../templates'), // Adjust this path
+          layoutsDir: templatesPath,
           defaultLayout: false,
         },
-        viewPath: join(__dirname, '../templates'), // Adjust this path
+        viewPath: templatesPath,
         extName: '.hbs',
       }),
     );

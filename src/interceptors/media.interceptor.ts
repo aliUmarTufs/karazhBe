@@ -25,8 +25,24 @@ export class MediaInterceptor implements NestInterceptor {
               response.data[i].mediaUrl = signUrl.data;
             }
           } else {
+            if (response.data?.ideas?.data?.length > 0) {
+              for (let i = 0; i < response.data?.ideas?.data?.length; i++) {
+                const signUrl = await _THIS.getFile.get_s3(
+                  response.data?.ideas?.data[i]?.mediaUrl,
+                );
+                response.data.ideas.data[i].mediaUrl = signUrl.data;
+              }
+            }
+            if (response.data?.drafts?.data?.length > 0) {
+              for (let i = 0; i < response.data?.drafts?.data?.length; i++) {
+                const signUrl = await _THIS.getFile.get_s3(
+                  response.data?.drafts?.data[i]?.mediaUrl,
+                );
+                response.data.drafts.data[i].mediaUrl = signUrl.data;
+              }
+            }
             const signUrl = await _THIS.getFile.get_s3(response.data?.mediaUrl);
-            response.data.mediaUrl = signUrl.data;
+            response.data.mediaUrl = signUrl?.data;
           }
           return response;
         } else {

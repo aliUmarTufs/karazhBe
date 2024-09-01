@@ -8,6 +8,8 @@ import {
   Req,
   UseInterceptors,
   UploadedFile,
+  Get,
+  Param,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Response } from 'express';
@@ -21,6 +23,7 @@ import { LocalAuthGuard } from './local-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UploadFile } from 'src/aws/uploadfile';
 import { GetFile } from 'src/aws/getfile.service';
+import { SocialMediaPlatform } from 'src/enum/SocialMediaPlatform';
 
 @Controller('auth')
 export class AuthController {
@@ -108,20 +111,25 @@ export class AuthController {
   }
 
   @Post('refresh')
-async refresh(@Body('refreshToken') refreshToken: string, @Res() res: Response) {
-  try {
-    const { access_token, refresh_token } = await this.authService.refresh(refreshToken);
+  async refresh(
+    @Body('refreshToken') refreshToken: string,
+    @Res() res: Response,
+  ) {
+    try {
+      const { access_token, refresh_token } =
+        await this.authService.refresh(refreshToken);
 
-    // Send the new refresh token in the response
-    return res.json({
-      access_token,
-      refresh_token,
-    });
-  } catch (error) {
-    return res.status(401).json({ message: 'Invalid or expired refresh token' });
+      // Send the new refresh token in the response
+      return res.json({
+        access_token,
+        refresh_token,
+      });
+    } catch (error) {
+      return res
+        .status(401)
+        .json({ message: 'Invalid or expired refresh token' });
+    }
   }
-}
-
 
   @UseGuards(LocalAuthGuard)
   @Post('update-profile')
@@ -198,5 +206,26 @@ async refresh(@Body('refreshToken') refreshToken: string, @Res() res: Response) 
     @Body() body: { name: string; userId: string; workSpaceId: string },
   ) {
     return await this.authService.createChannel(body);
+  }
+
+  @UseGuards(LocalAuthGuard)
+  @Get('get-channels/:workspaceId')
+  async getMyChannels(@Param('workspaceId') workspaceId: string, @Req() req) {
+    return await this.authService.getMyChannels(workspaceId, req.user);
+  }
+
+  // @UseGuards(LocalAuthGuard)
+  // @Get('get-channels/:workspaceId')
+  // async getUserDetails(@Param('workspaceId') workspaceId: string @Req() req) {
+  //   return await this.authService.getMyChannels(workspaceId, req.user);
+  // }
+
+  @UseGuards(LocalAuthGuard)
+  @Get('channel-enum')
+  async getChannelEnum() {
+    return {
+      status: true,
+      data: SocialMediaPlatform,
+    };
   }
 }

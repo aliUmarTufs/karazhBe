@@ -14,6 +14,8 @@ import { AuthDto, profileDto, UserDto } from '../auth/dto/create-auth.dto';
 import { JwtPayload } from './jwt-payload.interface';
 import { WorkspacesService } from 'src/workspaces/workspaces.service';
 import { CreateWorkspaceDto } from 'src/workspaces/dto/create-workspace.dto';
+import { SocialMediaPlatform } from 'src/enum/SocialMediaPlatform';
+import { validate } from 'class-validator';
 
 @Injectable()
 export class AuthService {
@@ -32,7 +34,9 @@ export class AuthService {
       `${this.signUp.name} has been called | authDto: ${JSON.stringify(authDto)}`,
     );
     try {
-      const checkIfUserExists = await this.usersService.findOneByEmail(authDto.email)
+      const checkIfUserExists = await this.usersService.findOneByEmail(
+        authDto.email,
+      );
       if (checkIfUserExists) {
         throw new BadRequestException('User already exists');
       }
@@ -151,7 +155,6 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
   }
-  
 
   async verifyOtp(email: string, token: string) {
     const isValid = await this.otpService.verifyOtp(email, token);
@@ -195,7 +198,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or Expired Token');
     }
 
-    const { sub: userId, email } = isValid;
+    const { email } = isValid;
     const user = await this.usersService.findOneByEmail(email);
     if (!user) {
       throw new UnauthorizedException('User not found');
@@ -317,6 +320,7 @@ export class AuthService {
     );
     try {
       const { userId, workSpaceId, name } = body;
+
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
       });
@@ -357,6 +361,45 @@ export class AuthService {
         status: false,
         message: error.message,
         error: null,
+      };
+    }
+  }
+
+  async getMyChannels(workspaceId: string, user: JwtPayload) {
+    this.logger.log(
+      `${this.getMyChannels.name} has been called | workspaceId: ${workspaceId}, user: ${JSON.stringify(user)}}`,
+    );
+    try {
+      const { userId } = user;
+      const loggedInUser = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+      if (!loggedInUser) {
+        throw new UnauthorizedException('User not found');
+      }
+      const workspace = await this.prisma.workSpace.findFirst({
+        where: { id: workspaceId },
+      });
+      if (!workspace) {
+        throw new UnauthorizedException('Workspace not found');
+      }
+
+      const myChannels = await this.prisma.channel.findMany({
+        where: { workSpaceId: workspace.id, userId: loggedInUser.id },
+      });
+      return {
+        status: true,
+        message: 'Channels fetched successfully',
+        data: myChannels,
+      };
+    } catch (error) {
+      this.logger.error(
+        `${this.getMyChannels.name} got an Error: ${JSON.stringify(error)}`,
+      );
+      return {
+        status: false,
+        message: error.message,
+        error,
       };
     }
   }
