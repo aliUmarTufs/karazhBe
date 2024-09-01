@@ -19,14 +19,6 @@ export class MailerService {
       },
     });
 
-    const templatesPath = join(__dirname, 'templates');
-    this.logger.log(`Templates directory path: ${templatesPath}`);
-
-    if (!fs.existsSync(templatesPath)) {
-      this.logger.error(`Templates directory not found: ${templatesPath}`);
-      throw new Error(`Templates directory not found: ${templatesPath}`);
-    }
-
     this.transporter.use(
       'compile',
       hbs({
