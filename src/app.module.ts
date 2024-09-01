@@ -13,6 +13,7 @@ import { OtpModule } from './otp/otp.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PostsModule } from './posts/posts.module';
 import { WorkspacesModule } from './workspaces/workspaces.module';
+import { ChannelModule } from './channel/channel.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module';
     PrismaModule,
     PostsModule,
     WorkspacesModule,
+    ChannelModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService, OtpService, MailerService],

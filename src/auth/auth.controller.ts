@@ -200,32 +200,9 @@ export class AuthController {
     }
   }
 
-  @UseGuards(LocalAuthGuard)
-  @Post('create-channel')
-  async createChannel(
-    @Body() body: { name: string; userId: string; workSpaceId: string },
-  ) {
-    return await this.authService.createChannel(body);
-  }
-
-  @UseGuards(LocalAuthGuard)
-  @Get('get-channels/:workspaceId')
-  async getMyChannels(@Param('workspaceId') workspaceId: string, @Req() req) {
-    return await this.authService.getMyChannels(workspaceId, req.user);
-  }
-
   // @UseGuards(LocalAuthGuard)
   // @Get('get-channels/:workspaceId')
   // async getUserDetails(@Param('workspaceId') workspaceId: string @Req() req) {
   //   return await this.authService.getMyChannels(workspaceId, req.user);
   // }
-
-  @UseGuards(LocalAuthGuard)
-  @Get('channel-enum')
-  async getChannelEnum() {
-    return {
-      status: true,
-      data: SocialMediaPlatform,
-    };
-  }
 }

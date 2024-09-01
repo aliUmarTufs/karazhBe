@@ -13,6 +13,7 @@ import { PostStatus } from '@prisma/client';
 import { CreateIdeaDto } from './dto/create-idea.dto';
 import { UpdateIdeaDto } from './dto/update-idea.dto';
 import { FilterContentDto } from './dto/filter-content.dto';
+import {SocialMediaPlatform } from 'src/enum/SocialMediaPlatform'
 
 @Injectable()
 export class PostsService {
@@ -125,8 +126,8 @@ export class PostsService {
 
         if (
           channelNames &&
-          (channelNames.includes('tiktok') ||
-            channelNames.includes('instagram')) &&
+          (channelNames.includes(SocialMediaPlatform.TIKTOK) ||
+            channelNames.includes(SocialMediaPlatform.INSTAGRAM)) &&
           createPostDto.mediaUrl === null
         ) {
           throw new BadRequestException(
@@ -578,10 +579,9 @@ export class PostsService {
       return {
         status: true,
         message: 'Content fetched by filter successfully',
-        data: {
-          ideas: { data: ideasForContent, count: ideasForContent.length },
-          // drafts: { data: draftResult, count: draftResult.length },
-        },
+        data: ideasForContent,
+        count: ideasForContent.length
+        
       };
     } catch (error) {
       this.logger.error(
