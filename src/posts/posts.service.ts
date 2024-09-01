@@ -32,6 +32,7 @@ export class PostsService {
         },
       });
 
+      idea['mediaKey'] = idea.mediaUrl;
       return {
         status: true,
         message: 'Your idea has been created!',
@@ -180,6 +181,7 @@ export class PostsService {
           id: completePostData.id,
           content: completePostData.content,
           mediaUrl: completePostData.mediaUrl,
+          mediaKey: completePostData.mediaUrl,
           status: completePostData.status,
           scheduledAt: completePostData.scheduledAt,
           createdAt: completePostData.createdAt,
@@ -233,8 +235,8 @@ export class PostsService {
           const channelNames = channelsArray.map((channel) => channel.name);
           if (
             channelNames &&
-            (channelNames.includes('tiktok') ||
-              channelNames.includes('instagram')) &&
+            (channelNames.includes(SocialMediaPlatform.TIKTOK) ||
+              channelNames.includes(SocialMediaPlatform.INSTAGRAM)) &&
             updatePostDto.mediaUrl === null
           ) {
             throw new BadRequestException(
@@ -295,6 +297,7 @@ export class PostsService {
         id: updatePost.id,
         content: updatePost.content,
         mediaUrl: updatePost.mediaUrl,
+        mediaKey: updatePost.mediaUrl,
         status: updatePost.status,
         scheduledAt: updatePost.scheduledAt,
         createdAt: updatePost.createdAt,
@@ -335,6 +338,7 @@ export class PostsService {
         },
       });
 
+      updateIdea['mediaKey'] = updateIdea.mediaUrl;
       return {
         status: true,
         message: 'Your idea has been updated!',
@@ -483,6 +487,7 @@ export class PostsService {
             id: post.id,
             content: post.content,
             mediaUrl: post.mediaUrl,
+            mediaKey: post.mediaUrl,
             status: post.status,
             scheduledAt: post.scheduledAt,
             createdAt: post.createdAt,
@@ -536,6 +541,10 @@ export class PostsService {
         skip: offset,
         orderBy: { createdAt: 'desc' },
       });
+
+      ideasForContent.map((idea) => {
+        idea['mediaKey'] = idea.mediaUrl;
+      })
 
       // const draftsForContent = await this.prisma.post.findMany({
       //   where: {
@@ -703,6 +712,7 @@ export class PostsService {
         id: completePostData.id,
         content: completePostData.content,
         mediaUrl: completePostData.mediaUrl,
+        mediaKey: completePostData.mediaUrl,
         status: completePostData.status,
         scheduledAt: completePostData.scheduledAt,
         createdAt: completePostData.createdAt,
