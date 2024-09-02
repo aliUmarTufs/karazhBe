@@ -5,9 +5,9 @@ export class CreateIdeaDto {
   @IsNotEmpty()
   content: string;
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  mediaUrl: string; // Single channel ID
+  mediaUrl?: string; // Single channel ID
 
   @IsOptional()
   @IsString()
