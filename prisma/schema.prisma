@@ -103,6 +103,8 @@ model Post {
   content     String
   // media       Json
   mediaUrl    String?
+  mediaName    String?
+  mediaType    String?
   status      PostStatus
   scheduledAt DateTime?
   createdAt   DateTime     @default(now())

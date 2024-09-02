@@ -124,6 +124,8 @@ export class PostsService {
           id: completePostData.id,
           content: completePostData.content,
           mediaUrl: completePostData.mediaUrl,
+          mediaName: completePostData.mediaName,
+          mediaType: completePostData.mediaType,
           mediaKey: completePostData.mediaUrl,
           status: completePostData.status,
           scheduledAt: completePostData.scheduledAt,
@@ -240,6 +242,8 @@ export class PostsService {
         id: updatePost.id,
         content: updatePost.content,
         mediaUrl: updatePost.mediaUrl,
+        mediaName: updatePost.mediaName,
+        mediaType: updatePost.mediaType,
         mediaKey: updatePost.mediaUrl,
         status: updatePost.status,
         scheduledAt: updatePost.scheduledAt,
@@ -448,6 +452,8 @@ export class PostsService {
             id: post.id,
             content: post.content,
             mediaUrl: post.mediaUrl,
+            mediaName: post.mediaName,
+            mediaType: post.mediaType,
             mediaKey: post.mediaUrl,
             status: post.status,
             scheduledAt: post.scheduledAt,
@@ -555,14 +561,16 @@ export class PostsService {
       });
 
       const draftResult = [];
-      if (draftsForContent.length > 0) {
+      if (draftsForContent?.length > 0) {
         for (const post of draftsForContent) {
-          const channelData = post.channels.map((channel) => channel.channel);
+          const channelData = post?.channels?.map((channel) => channel.channel);
 
           const postData = {
             id: post.id,
             content: post.content,
             mediaUrl: post.mediaUrl,
+            mediaName: post.mediaName,
+            mediaType: post.mediaType,
             mediaKey: post.mediaUrl,
             status: post.status,
             scheduledAt: post.scheduledAt,
@@ -581,7 +589,7 @@ export class PostsService {
         message: 'Content fetched by filter successfully',
         data: {
           // ideas: { data: ideasForContent, count: ideasForContent.length },
-          drafts: { data: draftResult, count: draftResult.length },
+          drafts: { data: draftResult, count: draftResult?.length },
         },
       };
     } catch (error) {
@@ -621,6 +629,8 @@ export class PostsService {
         id: completePostData.id,
         content: completePostData.content,
         mediaUrl: completePostData.mediaUrl,
+        mediaName: completePostData.mediaName,
+        mediaType: completePostData.mediaType,
         mediaKey: completePostData.mediaUrl,
         status: completePostData.status,
         scheduledAt: completePostData.scheduledAt,

@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsEnum, IsString } from 'class-validator';
+import { IsNotEmpty, IsEnum, IsString, IsOptional } from 'class-validator';
 import { PostStatus } from '@prisma/client';
 
 export class CreateIdeaDto {
@@ -8,6 +8,14 @@ export class CreateIdeaDto {
   @IsString()
   @IsNotEmpty()
   mediaUrl: string; // Single channel ID
+
+  @IsOptional()
+  @IsString()
+  mediaName?: string; // Single channel ID
+
+  @IsOptional()
+  @IsString()
+  mediaType?: string; // Single channel ID
 
   @IsEnum(PostStatus)
   status: PostStatus;

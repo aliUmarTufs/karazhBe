@@ -18,6 +18,14 @@ export class CreatePostDto {
   @IsString()
   mediaUrl?: string; // Single channel ID
 
+  @IsOptional()
+  @IsString()
+  mediaName?: string; // Single channel ID
+
+  @IsOptional()
+  @IsString()
+  mediaType?: string; // Single channel ID
+
   @IsEnum(PostStatus)
   status: PostStatus;
 
