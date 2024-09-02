@@ -29,13 +29,13 @@ export class FilterPostsDto {
   @Type(() => String)
   userId: string; // Single user ID
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsDate()
   @Type(() => Date)
-  startDate: Date;
+  startDate?: Date;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsDate()
   @Type(() => Date)
-  endDate: Date;
+  endDate?: Date;
 }
