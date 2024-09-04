@@ -150,7 +150,7 @@ export class AuthController {
     @Body() data: UploadFileDto,
   ) {
     try {
-      const check = await this.uploadImage.getFileExtension(file.originalname);
+      const check = await this.uploadImage.getFileExtension(file?.originalname);
       if (
         // check !== 'jpg' &&
         // check !== 'png' &&

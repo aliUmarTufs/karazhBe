@@ -100,7 +100,7 @@ model Channel {
 
 model Post {
   id          String       @id @default(cuid())
-  content     String
+  content     String       @db.LongText
   // media       Json
   mediaUrl    String?
   mediaName    String?
