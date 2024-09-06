@@ -393,13 +393,16 @@ export class PostsService {
                 OR: [
                   {
                     status: {
-                      not: PostStatus.IDEA, // Exclude IDEA posts
+                      not: PostStatus.IDEA,
+                    },
+                    scheduledAt: {
+                      not: null, // Ensure scheduledAt is not null for DRAFT posts in 'ALL' case
                     },
                   },
                   {
-                    status: PostStatus.DRAFT, // Include DRAFT posts but only when scheduledAt is not null
+                    status: PostStatus.DRAFT,
                     scheduledAt: {
-                      not: null,
+                      not: null, // Ensure scheduledAt is not null for DRAFT posts in 'ALL' case
                     },
                   },
                 ],
@@ -408,7 +411,7 @@ export class PostsService {
               ? {
                   status: status as PostStatus,
                   scheduledAt: {
-                    not: null,
+                    not: null, // Ensure only scheduled drafts are fetched when status is 'DRAFT'
                   },
                 }
               : { status: status as PostStatus },
@@ -437,8 +440,8 @@ export class PostsService {
                     channelId: { in: channelIds },
                   },
                 },
-              } // Fetch posts belonging to these channel IDs
-            : {}, // If 'ALL' or an empty array, this will include all channels
+              }
+            : {},
         ],
       };
 
