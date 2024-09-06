@@ -211,11 +211,11 @@ export class AuthService {
       this.logger.error(
         `${this.verifyOtp.name} got an Error: ${JSON.stringify(error)}`,
       );
-      return {
+      throw new BadRequestException({
         status: false,
         message: error.message,
         error,
-      };
+      });
     }
   }
 
