@@ -390,9 +390,19 @@ export class PostsService {
         AND: [
           status === 'ALL'
             ? {
-                status: {
-                  not: PostStatus.IDEA,
-                },
+                OR: [
+                  {
+                    status: {
+                      not: PostStatus.IDEA, // Exclude IDEA posts
+                    },
+                  },
+                  {
+                    status: PostStatus.DRAFT, // Include DRAFT posts but only when scheduledAt is not null
+                    scheduledAt: {
+                      not: null,
+                    },
+                  },
+                ],
               }
             : status === 'DRAFT'
               ? {
