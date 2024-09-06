@@ -87,8 +87,8 @@ export class AuthController {
   }
 
   @Post('verify-otp')
-  async verifyOtp(@Body() body: { email: string; otp: string }) {
-    return this.authService.verifyOtp(body.email, body.otp);
+  async verifyOtp(@Body() body: { email: string; token: string }) {
+    return this.authService.verifyOtp(body.email, body.token);
   }
 
   @Post('reset-password')
