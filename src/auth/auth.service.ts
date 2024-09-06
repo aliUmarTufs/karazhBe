@@ -176,7 +176,7 @@ export class AuthService {
     try {
       const isValid = await this.otpService.verifyOtp(email, token);
       if (!isValid) {
-        throw new UnauthorizedException('Invalid or expired OTP');
+        throw new BadRequestException('Invalid or expired OTP');
       }
 
       const user = await this.usersService.findOneByEmail(email);
