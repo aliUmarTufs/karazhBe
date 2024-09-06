@@ -64,10 +64,10 @@ export class OtpService {
         throw new UnauthorizedException('User not found');
       }
 
-      const otpRecord = await this.prisma.otp.findFirst({
+      const otpRecord = await this.prisma.otp.findUnique({
         where: {
-          userId: user.id,
           token,
+          userId: user.id,
           expiresAt: { gte: new Date() },
         },
       });
