@@ -1,5 +1,10 @@
-import { IsEmail, IsNotEmpty, IsString, Length } from 'class-validator';
-
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Length,
+} from 'class-validator';
 
 export class AuthDto {
   @IsNotEmpty()
@@ -23,9 +28,9 @@ export class profileDto {
   @IsString()
   name: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  industry: string;
+  industry?: string;
 }
 
 export class UploadFileDto {

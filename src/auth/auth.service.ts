@@ -75,7 +75,7 @@ export class AuthService {
 
   async validateUser(email: string, password: string): Promise<any> {
     const user = await this.usersService.findOneByEmail(email);
-    const checkPass = await bcrypt.compare(password, user.password);
+    const checkPass = await bcrypt.compare(password, user?.password);
     if (user && checkPass) {
       return user;
     }
@@ -83,27 +83,40 @@ export class AuthService {
   }
 
   async login(email: string, password: string) {
+    this.logger.log(
+      `${this.login.name} has been called | email: ${email}, password: ${password}`,
+    );
     try {
       const user = await this.validateUser(email, password);
       if (!user) {
-        throw new UnauthorizedException('Invalid credentials');
+        throw new UnauthorizedException(
+          'You have entered incorrect email or password.',
+        );
       }
 
       const getTokens = await this.generateTokens(user);
 
       return {
-        user: {
-          id: user.id,
-          email: user.email,
-          username: user.username, // Include any other user details you need
-          isVerified: user.isVerified,
+        status: true,
+        message: 'User logged in successfully',
+        data: {
+          user: {
+            id: user.id,
+            email: user.email,
+            username: user.username, // Include any other user details you need
+            isVerified: user.isVerified,
+          },
+          access_token: getTokens.access_token,
+          refresh_token: getTokens.refresh_token,
         },
-        access_token: getTokens.access_token,
-        refresh_token: getTokens.refresh_token,
       };
     } catch (error) {
-      this.logger.error(error);
-      throw new BadRequestException('Invalid credentials');
+      this.logger.error(
+        `${this.login.name} got an Error: ${JSON.stringify(error)}`,
+      );
+      throw new BadRequestException(
+        'You have entered incorrect email or password.',
+      );
     }
   }
 
@@ -157,39 +170,53 @@ export class AuthService {
   }
 
   async verifyOtp(email: string, token: string) {
-    const isValid = await this.otpService.verifyOtp(email, token);
-    if (!isValid) {
-      throw new UnauthorizedException('Invalid or expired OTP');
+    this.logger.log(
+      `${this.verifyOtp.name} has been called | email: ${email} | token: ${token}`,
+    );
+    try {
+      const isValid = await this.otpService.verifyOtp(email, token);
+      if (!isValid) {
+        throw new UnauthorizedException('Invalid or expired OTP');
+      }
+
+      const user = await this.usersService.findOneByEmail(email);
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      const payload: JwtPayload = {
+        email: user.email,
+        sub: user.id,
+        userId: user.id,
+      };
+
+      // Generate tokens
+      const access_token = this.jwtService.sign(payload, { expiresIn: '15m' }); // Example expiry
+      const refresh_token = this.jwtService.sign(payload, { expiresIn: '7d' }); // Example expiry
+
+      const userDetails = {
+        id: user.id,
+        email: user.email,
+        username: user.username, // Include any other user details you need,
+        access_token: access_token,
+        refresh_token: refresh_token,
+      };
+
+      return {
+        status: true,
+        menubar: 'Account verified successfully',
+        data: userDetails,
+      };
+    } catch (error) {
+      this.logger.error(
+        `${this.verifyOtp.name} got an Error: ${JSON.stringify(error)}`,
+      );
+      return {
+        status: false,
+        message: error.message,
+        error,
+      };
     }
-
-    const user = await this.usersService.findOneByEmail(email);
-    if (!user) {
-      throw new UnauthorizedException('User not found');
-    }
-
-    const payload: JwtPayload = {
-      email: user.email,
-      sub: user.id,
-      userId: user.id,
-    };
-
-    // Generate tokens
-    const access_token = this.jwtService.sign(payload, { expiresIn: '15m' }); // Example expiry
-    const refresh_token = this.jwtService.sign(payload, { expiresIn: '7d' }); // Example expiry
-
-    const userDetails = {
-      id: user.id,
-      email: user.email,
-      username: user.username, // Include any other user details you need,
-      access_token: access_token,
-      refresh_token: refresh_token,
-    };
-
-    return {
-      status: true,
-      menubar: 'Account verified successfully',
-      data: userDetails,
-    };
   }
 
   async sendOtp(token: string) {
@@ -231,8 +258,7 @@ export class AuthService {
     await this.prisma.user.update({
       where: { id: userId },
       data: {
-        industry: data.industry,
-        name: data.name,
+        ...data,
       },
     });
 
@@ -313,6 +339,4 @@ export class AuthService {
     const extension = await filename.split('.').pop();
     return extension;
   }
-
- 
 }

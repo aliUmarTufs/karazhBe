@@ -53,21 +53,7 @@ export class AuthController {
     @Res() res: Response,
     @Body() body: { email: string; password: string },
   ) {
-    const getUserDetails = await this.authService.login(
-      body.email,
-      body.password,
-    );
-    res.cookie('refresh_token', getUserDetails.refresh_token, {
-      httpOnly: true,
-      // secure: true,
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
-    return res.json({
-      status: true,
-      message: 'User logged in successfully',
-      data: getUserDetails,
-    });
+    return await this.authService.login(body.email, body.password);
   }
 
   @UseGuards(LocalAuthGuard)
