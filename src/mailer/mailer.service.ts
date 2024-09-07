@@ -66,7 +66,7 @@ export class MailerService {
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
-      subject: 'OTP Code for Password Rest',
+      subject: 'OTP Code for Reset Password',
       template: 'otpEmail', // template name without the file extension
       context: { otp }, // context to be passed to the template
     };
