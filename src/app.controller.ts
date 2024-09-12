@@ -9,4 +9,13 @@ export class AppController {
   getHello(): string {
     return this.appService.getHello();
   }
+
+  @Get('/webhook')
+  getWebhook() {
+    return {
+      status: true,
+      message: 'webhook response',
+      data: [],
+    };
+  }
 }
