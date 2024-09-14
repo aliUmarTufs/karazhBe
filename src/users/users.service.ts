@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 import { CreateUserDto } from './dto/create-user.dto';
+import { JwtPayload } from 'src/auth/jwt-payload.interface';
 
 @Injectable()
 export class UsersService {
@@ -18,6 +19,57 @@ export class UsersService {
     } catch (error) {
       this.logger.error(
         `${this.findOneByEmail.name} got an Error: ${JSON.stringify(error)}`,
+      );
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  async getUsers(filter, loggedInUser: JwtPayload) {
+    this.logger.log(
+      `${this.getUsers.name} has been called | filter: ${JSON.stringify(filter)}`,
+    );
+    try {
+      const where = {
+        id: {
+          not: {
+            equals: loggedInUser.userId,
+          },
+        },
+        OR:
+          filter.search !== undefined &&
+          filter.search !== null &&
+          filter.search !== ''
+            ? [
+                { name: { contains: filter.search } },
+                { username: { contains: filter.search } },
+                { email: { contains: filter.search } },
+              ]
+            : [],
+      };
+
+      const users = await this.prisma.user.findMany({
+        where,
+        include: {
+          WorkSpaces: true,
+        },
+        take: filter.limit || 10,
+        skip: filter.offset || 0,
+        orderBy: { email: 'asc' },
+      });
+
+      const filteredUsers = await users.filter(
+        (user) => user.WorkSpaces.length < 2,
+      );
+
+      return {
+        status: true,
+        message: 'Users fetched for invite',
+        data: filteredUsers,
+        totalCount: filteredUsers.length,
+      };
+    } catch (error) {
+      this.logger.error(
+        `${this.getUsers.name} got an Error: ${JSON.stringify(error)}`,
       );
       throw new BadRequestException(error.message);
     }

@@ -50,6 +50,7 @@ model UserWorkSpace {
   userId      String
   workSpaceId String
   role        Role
+  isConfirmed Boolean? @default(false)
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   workSpace   WorkSpace @relation(fields: [workSpaceId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   createdAt   DateTime  @default(now())

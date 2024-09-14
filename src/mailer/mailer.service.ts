@@ -2,7 +2,6 @@ import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import * as hbs from 'nodemailer-express-handlebars';
 import { join } from 'path';
-import * as fs from 'fs'; // Import fs to check file existence
 
 @Injectable()
 export class MailerService {
@@ -101,6 +100,32 @@ export class MailerService {
       this.logger.log(`sendEmail Response: ${JSON.stringify(info)}`);
     } catch (error) {
       this.logger.error(`${this.sendResetPasswordEmail.name} got an Error`);
+      this.logger.error(`sendEmail Error: ${JSON.stringify(error)}`);
+      throw new HttpException(error.message, HttpStatus.EXPECTATION_FAILED);
+    }
+  }
+
+  async sendInviteEmail(email: string, token: string, workspaceName: string) {
+    this.logger.log(
+      `${this.sendInviteEmail.name} has been called | email: ${email}, token: ${token}, workspaceName: ${workspaceName}`,
+    );
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'WorkSpace Invite',
+      template: 'inviteEmail', // Refers to the template name (verifyEmail.hbs)
+      context: {
+        token,
+        url: `${process.env.FRONTEND_URL}/accept-invite?token=${token}`,
+        workspaceName,
+      },
+    };
+
+    try {
+      const info = await this.transporter.sendMail(mailOptions);
+      this.logger.log(`sendEmail Response: ${JSON.stringify(info)}`);
+    } catch (error) {
+      this.logger.error(`${this.sendInviteEmail.name} got an Error`);
       this.logger.error(`sendEmail Error: ${JSON.stringify(error)}`);
       throw new HttpException(error.message, HttpStatus.EXPECTATION_FAILED);
     }
