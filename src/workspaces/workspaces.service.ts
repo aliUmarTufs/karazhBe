@@ -120,15 +120,19 @@ export class WorkspacesService {
 
       const userDetails = await this.prisma.user.findUnique({
         where: { id: userId },
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          industry: true,
+          isVerified: true,
+          // WorkSpaces: true,
+        },
       });
 
       if (!userDetails) {
         throw new HttpException('User not found', HttpStatus.NOT_FOUND);
       }
-
-      delete userDetails.password;
-      delete userDetails.createdAt;
-      delete userDetails.updatedAt;
 
       const getWorkSpace = await this.prisma.workSpace.findUnique({
         where: { id: workspaceId },
