@@ -40,7 +40,7 @@ export class UsersService {
           filter.search !== null &&
           filter.search !== ''
             ? [
-                { name: { contains: filter.search } },
+                // { name: { contains: filter.search } },
                 { username: { contains: filter.search } },
                 { email: { contains: filter.search } },
               ]
@@ -49,7 +49,11 @@ export class UsersService {
 
       const users = await this.prisma.user.findMany({
         where,
-        include: {
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          industry: true,
           WorkSpaces: true,
         },
         take: filter.limit || 10,
@@ -60,18 +64,59 @@ export class UsersService {
       const filteredUsers = await users.filter(
         (user) => user.WorkSpaces.length < 2,
       );
+      await filteredUsers.forEach((user) => delete user.WorkSpaces);
 
       return {
         status: true,
         message: 'Users fetched for invite',
+        totalCount: filteredUsers?.length,
         data: filteredUsers,
-        totalCount: filteredUsers.length,
       };
     } catch (error) {
       this.logger.error(
         `${this.getUsers.name} got an Error: ${JSON.stringify(error)}`,
       );
       throw new BadRequestException(error.message);
+    }
+  }
+
+  async verifyUser(email: string) {
+    this.logger.log(
+      `${this.verifyUser.name} has been called | email: ${email}`,
+    );
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { email },
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          industry: true,
+          WorkSpaces: true,
+        },
+      });
+      if (!user) {
+        throw new BadRequestException({
+          status: false,
+          message: 'User not found',
+        });
+      }
+      if (user.WorkSpaces.length >= 2) {
+        throw new BadRequestException({
+          status: false,
+          message: 'User already has 2 workspaces',
+        });
+      }
+      return {
+        status: true,
+        message: 'User verified successfully',
+        userId: user.id,
+      };
+    } catch (error) {
+      this.logger.error(
+        `${this.verifyUser.name} got an Error: ${JSON.stringify(error)}`,
+      );
+      throw error;
     }
   }
 

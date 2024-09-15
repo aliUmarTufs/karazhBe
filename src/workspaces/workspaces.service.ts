@@ -207,7 +207,7 @@ export class WorkspacesService {
       });
       const memberData = members.map((uw) => ({
         id: uw.user.id,
-        name: uw.user.name,
+        // name: uw.user.name,
         username: uw.user.username,
         email: uw.user.email,
         role: uw.role,
@@ -246,7 +246,7 @@ export class WorkspacesService {
       });
       const updatedData = {
         id: updatedUserWorkSpace.user.id,
-        name: updatedUserWorkSpace.user.name,
+        // name: updatedUserWorkSpace.user.name,
         username: updatedUserWorkSpace.user.username,
         email: updatedUserWorkSpace.user.email,
         role: updatedUserWorkSpace.role,
@@ -328,7 +328,7 @@ export class WorkspacesService {
             });
             resultData.push({
               id: member.user.id,
-              name: member.user.name,
+              // name: member.user.name,
               username: member.user.username,
               email: member.user.email,
               role: member.role,
@@ -404,7 +404,7 @@ export class WorkspacesService {
         );
         const resultData = {
           id: member.user.id,
-          name: member.user.name,
+          // name: member.user.name,
           username: member.user.username,
           email: member.user.email,
           role: member.role,

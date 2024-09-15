@@ -294,7 +294,7 @@ export class AuthService {
             id: userDetails.id,
             email: userDetails.email,
             username: userDetails.username,
-            name: userDetails.name,
+            // name: userDetails.name,
             industry: userDetails.industry,
             isVerified: userDetails.isVerified,
           },

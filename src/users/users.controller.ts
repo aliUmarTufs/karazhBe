@@ -11,7 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
+import { CreateUserDto, VerifyEmailDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { LocalAuthGuard } from 'src/auth/local-auth.guard';
 import { WorkSpaceAdminGuard } from 'src/guards/workspace-admin.guard';
@@ -34,5 +34,10 @@ export class UsersController {
       search: req.query.search,
     };
     return await this.usersService.getUsers(filter, req.user);
+  }
+  @UseGuards(LocalAuthGuard)
+  @Post('verify-email')
+  async verifyUser(@Body() body: VerifyEmailDto, @Req() req) {
+    return await this.usersService.verifyUser(body.email);
   }
 }

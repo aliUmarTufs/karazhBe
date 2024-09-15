@@ -26,7 +26,7 @@ export class UserDto {
 export class profileDto {
   @IsNotEmpty()
   @IsString()
-  name: string;
+  username: string;
 
   @IsOptional()
   @IsString()
