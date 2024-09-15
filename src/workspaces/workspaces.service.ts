@@ -126,6 +126,10 @@ export class WorkspacesService {
         throw new HttpException('User not found', HttpStatus.NOT_FOUND);
       }
 
+      delete userDetails.password;
+      delete userDetails.createdAt;
+      delete userDetails.updatedAt;
+
       const getWorkSpace = await this.prisma.workSpace.findUnique({
         where: { id: workspaceId },
       });

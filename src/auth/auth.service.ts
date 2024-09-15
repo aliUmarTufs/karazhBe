@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  HttpException,
+  HttpStatus,
   Injectable,
   Logger,
   UnauthorizedException,
@@ -267,6 +269,43 @@ export class AuthService {
       message: 'Profile updated successfully',
       data: [],
     };
+  }
+
+  async getProfile(user: JwtPayload) {
+    this.logger.log(
+      `${this.getProfile.name} has been called | user: ${JSON.stringify(user)}`,
+    );
+    try {
+      const { userId } = user;
+
+      const userDetails = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!userDetails) {
+        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+      }
+
+      return {
+        status: true,
+        message: 'Profile Fetched Succesfully',
+        data: {
+          user: {
+            id: userDetails.id,
+            email: userDetails.email,
+            username: userDetails.username,
+            name: userDetails.name,
+            industry: userDetails.industry,
+            isVerified: userDetails.isVerified,
+          },
+        },
+      };
+    } catch (error) {
+      this.logger.error(
+        `${this.getProfile.name} got an Error: ${JSON.stringify(error)}`,
+      );
+      throw new BadRequestException(error.message);
+    }
   }
 
   async resetPassword(email: string, newPassword: string) {

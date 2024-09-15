@@ -118,6 +118,12 @@ export class AuthController {
   }
 
   @UseGuards(LocalAuthGuard)
+  @Get('get-profile')
+  async getProfile(@Req() req) {
+    return await this.authService.getProfile(req.user);
+  }
+
+  @UseGuards(LocalAuthGuard)
   @Post('update-profile')
   async updateProfile(@Body() data: profileDto, @Req() req) {
     return await this.authService.updateProfile(data, req.user.userId);
