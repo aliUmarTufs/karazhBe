@@ -61,9 +61,16 @@ export class UsersService {
         orderBy: { email: 'asc' },
       });
 
-      const filteredUsers = await users.filter(
-        (user) => user.WorkSpaces.length < 2,
-      );
+      const filteredUsers = await users.filter((user) => {
+        let count = 0;
+        if (user.WorkSpaces.length > 0) {
+          for (const userSpaces of user.WorkSpaces) {
+            if (userSpaces.isConfirmed) count++;
+          }
+        }
+        return count < 2;
+      });
+
       await filteredUsers.forEach((user) => delete user.WorkSpaces);
 
       return {
