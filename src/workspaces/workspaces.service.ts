@@ -450,6 +450,7 @@ export class WorkspacesService {
           },
         },
       });
+
       if (!existingUserWorkSpace) {
         throw new HttpException(
           'Invalid invite token',

@@ -108,11 +108,17 @@ export class UsersService {
           message: 'User not found',
         });
       }
-      if (user.WorkSpaces.length >= 2) {
-        throw new BadRequestException({
-          status: false,
-          message: 'User already has 2 workspaces',
-        });
+      if (user.WorkSpaces.length > 0) {
+        let count = 0;
+        for (const userSpaces of user.WorkSpaces) {
+          if (userSpaces.isConfirmed) count++;
+        }
+        if (count >= 2) {
+          throw new BadRequestException({
+            status: false,
+            message: 'User already has 2 workspaces',
+          });
+        }
       }
       return {
         status: true,
