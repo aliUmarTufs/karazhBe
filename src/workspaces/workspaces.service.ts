@@ -134,8 +134,30 @@ export class WorkspacesService {
         throw new HttpException('WorkSpace not found', HttpStatus.NOT_FOUND);
       }
 
+      const userWorkspaces = await this.prisma.userWorkSpace.findUnique({
+        where: {
+          userId_workSpaceId: {
+            userId,
+            workSpaceId: getWorkSpace.id,
+          },
+          isConfirmed: true,
+        },
+        include: {
+          workSpace: true,
+        },
+      });
+
       const profileDetails = {
-        workspace: getWorkSpace,
+        workspace: {
+          id: userWorkspaces.workSpace.id,
+          name: userWorkspaces.workSpace.name,
+          role: userWorkspaces.role,
+          timeZone: userWorkspaces.workSpace.timeZone,
+          timeZoneOffset: userWorkspaces.workSpace.timeZoneOffset,
+          startDay: userWorkspaces.workSpace.startDay,
+          createdAt: userWorkspaces.workSpace.createdAt,
+          updatedAt: userWorkspaces.workSpace.updatedAt,
+        },
         user: userDetails,
       };
 
