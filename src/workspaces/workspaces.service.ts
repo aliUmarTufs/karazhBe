@@ -242,11 +242,40 @@ export class WorkspacesService {
     }
   }
 
-  async updateMember(id: string, body: { role?: Role; isConfirmed?: boolean }) {
+  async updateMember(
+    id: string,
+    body: { role?: Role; isConfirmed?: boolean },
+    loggedInUser: JwtPayload,
+  ) {
     this.logger.log(
       `${this.updateMember.name} has been called | id: ${id}, body: ${JSON.stringify(body)}`,
     );
     try {
+      const userDetails = await this.prisma.user.findUnique({
+        where: { id: loggedInUser.userId },
+      });
+      if (!userDetails) {
+        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+      }
+      const memberData = await this.prisma.userWorkSpace.findUnique({
+        where: { id: id, isConfirmed: true },
+      });
+      if (!memberData) {
+        throw new HttpException('Member not found', HttpStatus.NOT_FOUND);
+      }
+      if (memberData.userId === userDetails.id) {
+        throw new HttpException(
+          'You cannot update yourself',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      if (memberData.role === 'CREATOR') {
+        throw new HttpException(
+          'You cannot update creator of workspace',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
       const updatedUserWorkSpace = await this.prisma.userWorkSpace.update({
         where: { id },
         data: { ...body },
@@ -273,13 +302,39 @@ export class WorkspacesService {
       this.logger.error(
         `${this.updateMember.name} has an error | error: ${JSON.stringify(error)}`,
       );
-      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new BadRequestException(error.message);
     }
   }
 
-  async removeMember(id: string) {
+  async removeMember(id: string, loggedInUser: JwtPayload) {
     this.logger.log(`${this.removeMember.name} has been called | id: ${id}`);
     try {
+      const userDetails = await this.prisma.user.findUnique({
+        where: { id: loggedInUser.userId },
+      });
+      if (!userDetails) {
+        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+      }
+      const memberData = await this.prisma.userWorkSpace.findUnique({
+        where: { id: id, isConfirmed: true },
+      });
+      if (!memberData) {
+        throw new HttpException('Member not found', HttpStatus.NOT_FOUND);
+      }
+      if (memberData.userId === userDetails.id) {
+        throw new HttpException(
+          'You cannot remove yourself',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      if (memberData.role === 'CREATOR') {
+        throw new HttpException(
+          'You cannot remove creator from workspace',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
       await this.prisma.userWorkSpace.delete({
         where: { id },
       });
@@ -291,7 +346,7 @@ export class WorkspacesService {
       this.logger.error(
         `${this.removeMember.name} has an error | error: ${JSON.stringify(error)}`,
       );
-      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new BadRequestException(error.message);
     }
   }
 

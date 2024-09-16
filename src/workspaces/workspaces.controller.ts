@@ -60,8 +60,9 @@ export class WorkspacesController {
   async updateMember(
     @Param('workspaceId') workspaceId: string,
     @Body() body: { id?: string; role?: Role; isConfirmed?: boolean },
+    @Req() req,
   ) {
-    return await this.workspacesService.updateMember(body?.id, body);
+    return await this.workspacesService.updateMember(body?.id, body, req.user);
   }
 
   @UseGuards(LocalAuthGuard, WorkSpaceAdminGuard)
@@ -69,8 +70,9 @@ export class WorkspacesController {
   async removeMember(
     @Param('workspaceId') workspaceId: string,
     @Body() body: { id?: string },
+    @Req() req,
   ) {
-    return await this.workspacesService.removeMember(body?.id);
+    return await this.workspacesService.removeMember(body?.id, req.user);
   }
 
   @UseGuards(LocalAuthGuard, WorkSpaceAdminGuard)
