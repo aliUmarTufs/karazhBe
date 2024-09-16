@@ -210,7 +210,7 @@ export class WorkspacesService {
         throw new HttpException('WorkSpace not found', HttpStatus.NOT_FOUND);
       }
       const members = await this.prisma.userWorkSpace.findMany({
-        where: { workSpaceId: workspaceId },
+        where: { workSpaceId: workspaceId, isConfirmed: true },
         include: {
           user: true,
         },
