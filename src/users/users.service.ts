@@ -54,25 +54,22 @@ export class UsersService {
           username: true,
           email: true,
           industry: true,
-          WorkSpaces: true,
+          WorkSpaces: {
+            where: {
+              isConfirmed: true,
+            },
+          },
         },
         take: filter.limit || 10,
         skip: filter.offset || 0,
         orderBy: { email: 'asc' },
       });
 
-      const filteredUsers = await users.filter((user) => {
-        let count = 0;
-        if (user.WorkSpaces.length > 0) {
-          for (const userSpaces of user.WorkSpaces) {
-            if (userSpaces.isConfirmed) count++;
-          }
-        }
-        return count < 2;
-      });
+      const filteredUsers = users.filter((user) => user.WorkSpaces.length < 2);
 
-      await filteredUsers.forEach((user) => delete user.WorkSpaces);
+      filteredUsers.forEach((user) => delete user.WorkSpaces);
 
+      await Promise.all(filteredUsers);
       return {
         status: true,
         message: 'Users fetched for invite',
@@ -99,7 +96,11 @@ export class UsersService {
           username: true,
           email: true,
           industry: true,
-          WorkSpaces: true,
+          WorkSpaces: {
+            where: {
+              isConfirmed: true,
+            },
+          },
         },
       });
       if (!user) {
@@ -108,17 +109,11 @@ export class UsersService {
           message: 'User not found',
         });
       }
-      if (user.WorkSpaces.length > 0) {
-        let count = 0;
-        for (const userSpaces of user.WorkSpaces) {
-          if (userSpaces.isConfirmed) count++;
-        }
-        if (count >= 2) {
-          throw new BadRequestException({
-            status: false,
-            message: 'User already has 2 workspaces',
-          });
-        }
+      if (user.WorkSpaces.length >= 2) {
+        throw new BadRequestException({
+          status: false,
+          message: 'User already has 2 workspaces',
+        });
       }
       return {
         status: true,

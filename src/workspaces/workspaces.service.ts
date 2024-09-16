@@ -1,5 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { AddMemberDto, CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { JwtPayload } from 'src/auth/jwt-payload.interface';
@@ -210,13 +216,13 @@ export class WorkspacesService {
         },
       });
       const memberData = members.map((uw) => ({
-        id: uw.user.id,
+        memberId: uw.user.id,
         // name: uw.user.name,
         username: uw.user.username,
         email: uw.user.email,
         role: uw.role,
         isConfirmed: uw.isConfirmed,
-        memberId: uw.id,
+        id: uw.id,
         workSpaceId: uw.workSpaceId,
       }));
       return {
@@ -249,13 +255,13 @@ export class WorkspacesService {
         },
       });
       const updatedData = {
-        id: updatedUserWorkSpace.user.id,
+        memberId: updatedUserWorkSpace.user.id,
         // name: updatedUserWorkSpace.user.name,
         username: updatedUserWorkSpace.user.username,
         email: updatedUserWorkSpace.user.email,
         role: updatedUserWorkSpace.role,
         isConfirmed: updatedUserWorkSpace.isConfirmed,
-        memberId: updatedUserWorkSpace.id,
+        id: updatedUserWorkSpace.id,
         workSpaceId: updatedUserWorkSpace.workSpaceId,
       };
       return {
@@ -300,9 +306,27 @@ export class WorkspacesService {
           for (const memberData of addMemberDto.members) {
             const existingUser = await this.prisma.user.findUnique({
               where: { id: memberData.userId },
+              select: {
+                id: true,
+                username: true,
+                email: true,
+                industry: true,
+                WorkSpaces: {
+                  where: {
+                    isConfirmed: true,
+                  },
+                },
+              },
             });
             if (!existingUser) {
               throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+            }
+
+            if (existingUser.WorkSpaces.length >= 2) {
+              throw new HttpException(
+                'You are already in two work spaces',
+                HttpStatus.BAD_REQUEST,
+              );
             }
             const existingUserWorkSpace =
               await this.prisma.userWorkSpace.findUnique({
@@ -312,47 +336,78 @@ export class WorkspacesService {
                     workSpaceId: workspaceId,
                   },
                 },
+                include: {
+                  user: true,
+                  workSpace: true,
+                },
               });
             if (existingUserWorkSpace) {
-              throw new HttpException(
-                'User already exists in this workspace',
-                HttpStatus.CONFLICT,
+              if (existingUserWorkSpace.isConfirmed) {
+                throw new HttpException(
+                  'User already exists in this workspace',
+                  HttpStatus.CONFLICT,
+                );
+              } else {
+                resultData.push({
+                  memberId: existingUserWorkSpace.user.id,
+                  // name: existingUserWorkSpace.user.name,
+                  username: existingUserWorkSpace.user.username,
+                  email: existingUserWorkSpace.user.email,
+                  role: existingUserWorkSpace.role,
+                  isConfirmed: existingUserWorkSpace.isConfirmed,
+                  id: existingUserWorkSpace.id,
+                  workSpaceId: existingUserWorkSpace.workSpaceId,
+                });
+                const inviteToken = this.jwtService.sign(
+                  {
+                    memberId: existingUserWorkSpace.id,
+                    userId: existingUserWorkSpace.userId,
+                    workSpaceId: existingUserWorkSpace.workSpaceId,
+                  },
+                  { expiresIn: '7d' },
+                );
+                await this.mailerService.sendInviteEmail(
+                  existingUserWorkSpace.user.email,
+                  inviteToken,
+                  existingUserWorkSpace.workSpace.name,
+                );
+              }
+            } else {
+              const member = await this.prisma.userWorkSpace.create({
+                data: {
+                  userId: existingUser.id,
+                  workSpaceId: workspaceId,
+                  role: memberData.role, // Enum value for the member role
+                },
+                include: {
+                  user: true,
+                  workSpace: true,
+                },
+              });
+              resultData.push({
+                memberId: member.user.id,
+                // name: member.user.name,
+                username: member.user.username,
+                email: member.user.email,
+                role: member.role,
+                isConfirmed: member.isConfirmed,
+                id: member.id,
+                workSpaceId: member.workSpaceId,
+              });
+              const inviteToken = this.jwtService.sign(
+                {
+                  memberId: member.id,
+                  userId: member.userId,
+                  workSpaceId: member.workSpaceId,
+                },
+                { expiresIn: '7d' },
+              );
+              await this.mailerService.sendInviteEmail(
+                member.user.email,
+                inviteToken,
+                member.workSpace.name,
               );
             }
-            const member = await this.prisma.userWorkSpace.create({
-              data: {
-                userId: existingUser.id,
-                workSpaceId: workspaceId,
-                role: memberData.role, // Enum value for the member role
-              },
-              include: {
-                user: true,
-                workSpace: true,
-              },
-            });
-            resultData.push({
-              id: member.user.id,
-              // name: member.user.name,
-              username: member.user.username,
-              email: member.user.email,
-              role: member.role,
-              isConfirmed: member.isConfirmed,
-              memberId: member.id,
-              workSpaceId: member.workSpaceId,
-            });
-            const inviteToken = this.jwtService.sign(
-              {
-                memberId: member.id,
-                userId: member.userId,
-                workSpaceId: member.workSpaceId,
-              },
-              { expiresIn: '7d' },
-            );
-            await this.mailerService.sendInviteEmail(
-              member.user.email,
-              inviteToken,
-              member.workSpace.name,
-            );
           }
           return {
             status: true,
@@ -363,10 +418,28 @@ export class WorkspacesService {
       } else {
         const existingUser = await this.prisma.user.findUnique({
           where: { id: addMemberDto.members[0].userId },
+          select: {
+            id: true,
+            username: true,
+            email: true,
+            industry: true,
+            WorkSpaces: {
+              where: {
+                isConfirmed: true,
+              },
+            },
+          },
         });
         if (!existingUser) {
           throw new HttpException('User not found', HttpStatus.NOT_FOUND);
         }
+        if (existingUser.WorkSpaces.length >= 2) {
+          throw new HttpException(
+            'You are already in two work spaces',
+            HttpStatus.BAD_REQUEST,
+          );
+        }
+
         const existingUserWorkSpace =
           await this.prisma.userWorkSpace.findUnique({
             where: {
@@ -375,52 +448,88 @@ export class WorkspacesService {
                 workSpaceId: workspaceId,
               },
             },
+            include: {
+              user: true,
+              workSpace: true,
+            },
           });
         if (existingUserWorkSpace) {
-          throw new HttpException(
-            'User already exists in this workspace',
-            HttpStatus.CONFLICT,
+          if (existingUserWorkSpace.isConfirmed) {
+            throw new HttpException(
+              'User already exists in this workspace',
+              HttpStatus.CONFLICT,
+            );
+          } else {
+            const inviteToken = this.jwtService.sign(
+              {
+                memberId: existingUserWorkSpace.id,
+                userId: existingUserWorkSpace.userId,
+                workSpaceId: existingUserWorkSpace.workSpaceId,
+              },
+              { expiresIn: '7d' },
+            );
+            await this.mailerService.sendInviteEmail(
+              existingUserWorkSpace.user.email,
+              inviteToken,
+              existingUserWorkSpace.workSpace.name,
+            );
+            const resultData = {
+              memberId: existingUserWorkSpace.user.id,
+              // name: existingUserWorkSpace.user.name,
+              username: existingUserWorkSpace.user.username,
+              email: existingUserWorkSpace.user.email,
+              role: existingUserWorkSpace.role,
+              isConfirmed: existingUserWorkSpace.isConfirmed,
+              id: existingUserWorkSpace.id,
+              workSpaceId: existingUserWorkSpace.workSpaceId,
+            };
+            return {
+              status: true,
+              message: 'Member added successfully',
+              data: resultData,
+            };
+          }
+        } else {
+          const member = await this.prisma.userWorkSpace.create({
+            data: {
+              userId: existingUser.id,
+              workSpaceId: workspaceId,
+              role: addMemberDto.members[0]?.role, // Enum value for the member role
+            },
+            include: {
+              user: true,
+              workSpace: true,
+            },
+          });
+          const inviteToken = this.jwtService.sign(
+            {
+              memberId: member.id,
+              userId: member.userId,
+              workSpaceId: member.workSpaceId,
+            },
+            { expiresIn: '7d' },
           );
-        }
-        const member = await this.prisma.userWorkSpace.create({
-          data: {
-            userId: existingUser.id,
-            workSpaceId: workspaceId,
-            role: addMemberDto.members[0]?.role, // Enum value for the member role
-          },
-          include: {
-            user: true,
-            workSpace: true,
-          },
-        });
-        const inviteToken = this.jwtService.sign(
-          {
-            memberId: member.id,
-            userId: member.userId,
+          await this.mailerService.sendInviteEmail(
+            member.user.email,
+            inviteToken,
+            member.workSpace.name,
+          );
+          const resultData = {
+            memberId: member.user.id,
+            // name: member.user.name,
+            username: member.user.username,
+            email: member.user.email,
+            role: member.role,
+            isConfirmed: member.isConfirmed,
+            id: member.id,
             workSpaceId: member.workSpaceId,
-          },
-          { expiresIn: '7d' },
-        );
-        await this.mailerService.sendInviteEmail(
-          member.user.email,
-          inviteToken,
-          member.workSpace.name,
-        );
-        const resultData = {
-          id: member.user.id,
-          // name: member.user.name,
-          username: member.user.username,
-          email: member.user.email,
-          role: member.role,
-          isConfirmed: member.isConfirmed,
-          memberId: member.id,
-          workSpaceId: member.workSpaceId,
-        };
-        return {
-          status: true,
-          message: 'Member added successfully',
-          data: resultData,
-        };
+          };
+          return {
+            status: true,
+            message: 'Member added successfully',
+            data: resultData,
+          };
+        }
       }
     } catch (error) {
       this.logger.error(
@@ -455,6 +564,30 @@ export class WorkspacesService {
         throw new HttpException(
           'Invalid invite token',
           HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      const user = await this.prisma.user.findUnique({
+        where: {
+          id: userId,
+        },
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          industry: true,
+          WorkSpaces: {
+            where: {
+              isConfirmed: true,
+            },
+          },
+        },
+      });
+
+      if (user.WorkSpaces.length >= 2) {
+        throw new HttpException(
+          'You are already in two work spaces',
+          HttpStatus.BAD_REQUEST,
         );
       }
 
