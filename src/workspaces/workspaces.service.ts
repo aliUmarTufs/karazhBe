@@ -131,7 +131,7 @@ export class WorkspacesService {
 
   async findOne(workspaceId: string, user: JwtPayload) {
     this.logger.log(
-      `${this.findOne.name} has been called | workspaceId: ${workspaceId}`,
+      `${this.findOne.name} has been called | workspaceId: ${workspaceId}, user: ${JSON.stringify(user)}`,
     );
     try {
       const { userId, email } = user;
@@ -174,6 +174,8 @@ export class WorkspacesService {
           workSpace: true,
         },
       });
+
+      this.logger.log(userWorkspaces);
 
       // Check if the user's createdAt is older than 3 days
       const createdAt = new Date(userDetails.createdAt);
