@@ -23,10 +23,10 @@ export class MailerService {
       hbs({
         viewEngine: {
           extname: '.hbs',
-          layoutsDir: join(__dirname, 'templates'), // Adjust this path
+          layoutsDir: join(__dirname, '../templates'), // Adjust this path
           defaultLayout: false,
         },
-        viewPath: join(__dirname, 'templates'), // Adjust this path
+        viewPath: join(__dirname, '../templates'), // Adjust this path
         extName: '.hbs',
       }),
     );
