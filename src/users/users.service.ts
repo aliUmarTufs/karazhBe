@@ -84,7 +84,7 @@ export class UsersService {
     }
   }
 
-  async verifyUser(email: string) {
+  async verifyUser(email: string, loggedInUser: JwtPayload) {
     this.logger.log(
       `${this.verifyUser.name} has been called | email: ${email}`,
     );
@@ -96,30 +96,19 @@ export class UsersService {
           username: true,
           email: true,
           industry: true,
-          WorkSpaces: {
-            where: {
-              isConfirmed: true,
-            },
-          },
         },
       });
-      if (!user) {
+      if (user) {
         throw new BadRequestException({
           status: false,
-          message: 'User not found',
+          message: 'User already exists',
         });
+      } else {
+        return {
+          status: true,
+          message: 'User verified successfully',
+        };
       }
-      if (user.WorkSpaces.length >= 2) {
-        throw new BadRequestException({
-          status: false,
-          message: 'User already has 2 workspaces',
-        });
-      }
-      return {
-        status: true,
-        message: 'User verified successfully',
-        userId: user.id,
-      };
     } catch (error) {
       this.logger.error(
         `${this.verifyUser.name} got an Error: ${JSON.stringify(error)}`,

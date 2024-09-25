@@ -10,6 +10,7 @@ import {
   IsArray,
   ValidateIf,
   ValidateNested,
+  IsEmail,
 } from 'class-validator';
 
 export class CreateWorkspaceDto {
@@ -45,8 +46,8 @@ export class AddMemberDto {
 
 export class MemberDto {
   @IsNotEmpty()
-  @IsString()
-  userId: string;
+  @IsEmail()
+  email: string;
 
   @IsNotEmpty()
   @IsEnum(Role)

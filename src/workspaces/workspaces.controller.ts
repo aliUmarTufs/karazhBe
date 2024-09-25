@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -14,6 +15,7 @@ import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
 import { WorkSpaceAdminGuard } from 'src/guards/workspace-admin.guard';
 import { Role } from '@prisma/client';
 import { AddMemberDto } from './dto/create-workspace.dto';
+import { query } from 'express';
 
 @Controller('workspaces')
 export class WorkspacesController {
@@ -25,8 +27,11 @@ export class WorkspacesController {
   // }
   @UseGuards(LocalAuthGuard)
   @Get()
-  async getUserWorkSpaces(@Req() req) {
-    return this.workspacesService.getUserWorkSpaces(req.user.userId);
+  async getUserWorkSpaces(
+    @Req() req,
+    @Query() query: { limit?: number; offset?: number },
+  ) {
+    return this.workspacesService.getUserWorkSpaces(req.user.userId, query);
   }
   @UseGuards(LocalAuthGuard, WorkSpaceAdminGuard)
   @Patch(':workspaceId')
@@ -80,8 +85,14 @@ export class WorkspacesController {
   async addMember(
     @Param('workspaceId') workspaceId: string,
     @Body() addMemberDto: AddMemberDto,
+    @Req() req,
   ) {
-    return await this.workspacesService.addMember(workspaceId, addMemberDto);
+    const origin = req.headers['origin'] || req.headers['referer']; // Extract the origin or referer from headers
+    return await this.workspacesService.addMember(
+      workspaceId,
+      addMemberDto,
+      origin,
+    );
   }
 
   @Post('accept-invite')

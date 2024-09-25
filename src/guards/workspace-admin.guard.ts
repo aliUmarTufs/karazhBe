@@ -35,8 +35,9 @@ export class WorkSpaceAdminGuard implements CanActivate {
       // Fetch the user's role in the workspace
       const userWorkspaces = await this.prisma.userWorkSpace.findUnique({
         where: {
-          userId_workSpaceId: {
+          userId_workSpaceId_email: {
             userId: request.user.userId,
+            email: request.user.email,
             workSpaceId: workspaceId,
           },
         },

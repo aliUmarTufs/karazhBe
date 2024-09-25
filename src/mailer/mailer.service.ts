@@ -23,18 +23,18 @@ export class MailerService {
       hbs({
         viewEngine: {
           extname: '.hbs',
-          layoutsDir: join(__dirname, '../templates'), // Adjust this path
+          layoutsDir: join(__dirname, 'templates'), // Adjust this path
           defaultLayout: false,
         },
-        viewPath: join(__dirname, '../templates'), // Adjust this path
+        viewPath: join(__dirname, 'templates'), // Adjust this path
         extName: '.hbs',
       }),
     );
   }
 
-  async sendEmailVerification(email: string, token: string) {
+  async sendEmailVerification(email: string, token: string, origin?: string) {
     this.logger.log(
-      `${this.sendEmailVerification.name} has been called | email: ${email}, token: ${token}`,
+      `${this.sendEmailVerification.name} has been called | email: ${email}, token: ${token}, origin: ${origin}`,
     );
 
     const mailOptions = {
@@ -44,7 +44,7 @@ export class MailerService {
       template: 'verifyEmail', // Refers to the template name (verifyEmail.hbs)
       context: {
         token,
-        url: `${process.env.FRONTEND_URL}/verify-email?token=${token}`,
+        url: `${origin ? origin : process.env.FRONTEND_URL}/verify-email?token=${token}`,
       },
     };
 
@@ -60,7 +60,7 @@ export class MailerService {
 
   async sendOtpEmail(email: string, otp: string) {
     this.logger.log(
-      `${this.sendOtpEmail.name} has been called | email: ${email}, otp: ${otp}`,
+      `${this.sendOtpEmail.name} has been called | email: ${email}, otp: ${otp}, `,
     );
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -80,9 +80,9 @@ export class MailerService {
     }
   }
 
-  async sendResetPasswordEmail(email: string, token: string) {
+  async sendResetPasswordEmail(email: string, token: string, origin?: string) {
     this.logger.log(
-      `${this.sendResetPasswordEmail.name} has been called | email: ${email}, token: ${token}`,
+      `${this.sendResetPasswordEmail.name} has been called | email: ${email}, token: ${token}, origin: ${origin}`,
     );
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -91,9 +91,11 @@ export class MailerService {
       template: 'resetPassword', // Refers to the template name (verifyEmail.hbs)
       context: {
         token,
-        url: `${process.env.FRONTEND_URL}/confirm-otp?token=${token}`,
+        url: `${origin ? origin : process.env.FRONTEND_URL}/confirm-otp?token=${token}`,
       },
     };
+
+    this.logger.debug(`link: ${mailOptions.context.url}`);
 
     try {
       const info = await this.transporter.sendMail(mailOptions);
@@ -105,18 +107,26 @@ export class MailerService {
     }
   }
 
-  async sendInviteEmail(email: string, token: string, workspaceName: string) {
+  async sendInviteEmail(
+    isSignUp: boolean,
+    email: string,
+    token: string,
+    workspaceName: string,
+    origin?: string,
+  ) {
     this.logger.log(
-      `${this.sendInviteEmail.name} has been called | email: ${email}, token: ${token}, workspaceName: ${workspaceName}`,
+      `${this.sendInviteEmail.name} has been called | email: ${email}, token: ${token}, workspaceName: ${workspaceName}, origin: ${origin}`,
     );
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
-      subject: 'WorkSpace Invite',
-      template: 'inviteEmail', // Refers to the template name (verifyEmail.hbs)
+      subject: isSignUp ? 'WorkSpace Onboard Invite' : 'Workspace Invite',
+      template: isSignUp ? 'signupInviteEmail' : 'inviteEmail', // Refers to the template name (verifyEmail.hbs)
       context: {
         token,
-        url: `${process.env.FRONTEND_URL}/accept-invite?token=${token}`,
+        url: isSignUp
+          ? `${origin ? origin : process.env.FRONTEND_URL}/signup?email=${email}&token=${token}`
+          : `${origin ? origin : process.env.FRONTEND_URL}/accept-invite?token=${token}`,
         workspaceName,
       },
     };

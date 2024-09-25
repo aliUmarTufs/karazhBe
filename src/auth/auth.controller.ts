@@ -9,7 +9,6 @@ import {
   UseInterceptors,
   UploadedFile,
   Get,
-  Param,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Response } from 'express';
@@ -23,7 +22,6 @@ import { LocalAuthGuard } from './local-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UploadFile } from 'src/aws/uploadfile';
 import { GetFile } from 'src/aws/getfile.service';
-import { SocialMediaPlatform } from 'src/enum/SocialMediaPlatform';
 
 @Controller('auth')
 export class AuthController {
@@ -34,8 +32,13 @@ export class AuthController {
   ) {}
 
   @Post('signup')
-  async signUp(@Res() res: Response, @Body() authDto: AuthDto) {
-    const newUser = await this.authService.signUp(authDto);
+  async signUp(
+    @Req() req: Request, // Inject the request object to access headers
+    @Res() res: Response,
+    @Body() authDto: AuthDto,
+  ) {
+    const origin = req.headers['origin'] || req.headers['referer']; // Extract the origin or referer from headers
+    const newUser = await this.authService.signUp(authDto, origin);
     res.cookie('refresh_token', newUser.refresh_token, {
       httpOnly: true,
       // secure: true,
@@ -58,8 +61,12 @@ export class AuthController {
 
   @UseGuards(LocalAuthGuard)
   @Post('resend-verification-email')
-  async sendEmailVerification(@Body() userDto: UserDto) {
-    return await this.authService.sendEmailVerification(userDto);
+  async sendEmailVerification(
+    @Body() userDto: UserDto,
+    @Req() req: Request, // Inject the request object to access headers
+  ) {
+    const origin = req.headers['origin'] || req.headers['referer']; // Extract the origin or referer from headers
+    return await this.authService.sendEmailVerification(userDto, origin);
   }
 
   @Post('verify-email')
@@ -68,8 +75,9 @@ export class AuthController {
   }
 
   @Post('forget-password')
-  async forgetPassword(@Body() body: { email: string }) {
-    return this.authService.forgetPassword(body.email);
+  async forgetPassword(@Body() body: { email: string }, @Req() req) {
+    const origin = req.headers['origin'] || req.headers['referer']; // Extract the origin or referer from headers
+    return this.authService.forgetPassword(body.email, origin);
   }
 
   @Post('send-otp')

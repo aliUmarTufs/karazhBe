@@ -6,7 +6,11 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
-import { AddMemberDto, CreateWorkspaceDto } from './dto/create-workspace.dto';
+import {
+  AddMemberDto,
+  CreateWorkspaceDto,
+  MemberDto,
+} from './dto/create-workspace.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { JwtPayload } from 'src/auth/jwt-payload.interface';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
@@ -14,6 +18,7 @@ import { User } from '@prisma/client';
 import { Role } from '@prisma/client';
 import { MailerService } from 'src/mailer/mailer.service';
 import { JwtService } from '@nestjs/jwt';
+import { addDays, isAfter } from 'date-fns';
 
 @Injectable()
 export class WorkspacesService {
@@ -41,6 +46,7 @@ export class WorkspacesService {
       await this.prisma.userWorkSpace.create({
         data: {
           userId: user.id,
+          email: user.email,
           workSpaceId: workspace.id,
           role: 'CREATOR', // Enum value for the creator role
           isConfirmed: true,
@@ -76,9 +82,12 @@ export class WorkspacesService {
     }
   }
 
-  async getUserWorkSpaces(userId: string) {
+  async getUserWorkSpaces(
+    userId: string,
+    query: { limit?: number; offset?: number },
+  ) {
     this.logger.log(
-      `${this.getUserWorkSpaces.name} has been called | userId: ${userId}`,
+      `${this.getUserWorkSpaces.name} has been called | userId: ${userId}, query: ${JSON.stringify(query)}`,
     );
     try {
       const userWorkspaces = await this.prisma.userWorkSpace.findMany({
@@ -86,6 +95,9 @@ export class WorkspacesService {
         include: {
           workSpace: true,
         },
+        take: query.limit ? +query.limit : undefined,
+        skip: query.offset ? +query.offset : undefined,
+        // orderBy: { role: 'CREATOR' },
       });
 
       const workSpaceData = await userWorkspaces.map((uw) => ({
@@ -122,7 +134,7 @@ export class WorkspacesService {
       `${this.findOne.name} has been called | workspaceId: ${workspaceId}`,
     );
     try {
-      const { userId } = user;
+      const { userId, email } = user;
 
       const userDetails = await this.prisma.user.findUnique({
         where: { id: userId },
@@ -132,6 +144,7 @@ export class WorkspacesService {
           email: true,
           industry: true,
           isVerified: true,
+          createdAt: true,
           // WorkSpaces: true,
         },
       });
@@ -150,9 +163,10 @@ export class WorkspacesService {
 
       const userWorkspaces = await this.prisma.userWorkSpace.findUnique({
         where: {
-          userId_workSpaceId: {
+          userId_workSpaceId_email: {
             userId,
             workSpaceId: getWorkSpace.id,
+            email,
           },
           isConfirmed: true,
         },
@@ -160,6 +174,10 @@ export class WorkspacesService {
           workSpace: true,
         },
       });
+
+      // Check if the user's createdAt is older than 3 days
+      const createdAt = new Date(userDetails.createdAt);
+      const threeDaysAgo = addDays(new Date(), -3);
 
       const profileDetails = {
         workspace: {
@@ -172,7 +190,14 @@ export class WorkspacesService {
           createdAt: userWorkspaces.workSpace.createdAt,
           updatedAt: userWorkspaces.workSpace.updatedAt,
         },
-        user: userDetails,
+        user: {
+          ...userDetails,
+          isFreeze: !userDetails.isVerified
+            ? createdAt < threeDaysAgo
+              ? true
+              : false
+            : false,
+        },
       };
 
       return {
@@ -216,10 +241,10 @@ export class WorkspacesService {
         },
       });
       const memberData = members.map((uw) => ({
-        memberId: uw.user.id,
+        memberId: uw?.user?.id,
         // name: uw.user.name,
-        username: uw.user.username,
-        email: uw.user.email,
+        username: uw?.user?.username,
+        email: uw?.user?.email || uw?.email,
         role: uw.role,
         isConfirmed: uw.isConfirmed,
         id: uw.id,
@@ -255,13 +280,13 @@ export class WorkspacesService {
         where: { id: loggedInUser.userId },
       });
       if (!userDetails) {
-        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+        throw new HttpException('User not found', HttpStatus.BAD_REQUEST);
       }
       const memberData = await this.prisma.userWorkSpace.findUnique({
         where: { id: id, isConfirmed: true },
       });
       if (!memberData) {
-        throw new HttpException('Member not found', HttpStatus.NOT_FOUND);
+        throw new HttpException('Member not found', HttpStatus.BAD_REQUEST);
       }
       if (memberData.userId === userDetails.id) {
         throw new HttpException(
@@ -278,16 +303,16 @@ export class WorkspacesService {
       }
       const updatedUserWorkSpace = await this.prisma.userWorkSpace.update({
         where: { id },
-        data: { ...body },
+        data: { ...body, updatedAt: memberData.updatedAt },
         include: {
           user: true,
         },
       });
       const updatedData = {
-        memberId: updatedUserWorkSpace.user.id,
-        // name: updatedUserWorkSpace.user.name,
-        username: updatedUserWorkSpace.user.username,
-        email: updatedUserWorkSpace.user.email,
+        memberId: updatedUserWorkSpace?.user?.id,
+        // name: updatedUserWorkSpace?.user?.name,
+        username: updatedUserWorkSpace?.user?.username,
+        email: updatedUserWorkSpace?.user?.email || updatedUserWorkSpace?.email,
         role: updatedUserWorkSpace.role,
         isConfirmed: updatedUserWorkSpace.isConfirmed,
         id: updatedUserWorkSpace.id,
@@ -313,13 +338,13 @@ export class WorkspacesService {
         where: { id: loggedInUser.userId },
       });
       if (!userDetails) {
-        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+        throw new HttpException('User not found', HttpStatus.BAD_REQUEST);
       }
       const memberData = await this.prisma.userWorkSpace.findUnique({
         where: { id: id, isConfirmed: true },
       });
       if (!memberData) {
-        throw new HttpException('Member not found', HttpStatus.NOT_FOUND);
+        throw new HttpException('Member not found', HttpStatus.BAD_REQUEST);
       }
       if (memberData.userId === userDetails.id) {
         throw new HttpException(
@@ -350,248 +375,281 @@ export class WorkspacesService {
     }
   }
 
-  async addMember(workspaceId: string, addMemberDto: AddMemberDto) {
+  async addMember(
+    workspaceId: string,
+    addMemberDto: AddMemberDto,
+    origin?: string,
+  ) {
     this.logger.log(
-      `${this.addMember.name} has been called | workspaceId: ${workspaceId}, addMemberDto: ${JSON.stringify(addMemberDto)}`,
+      `${this.addMember.name} called | workspaceId: ${workspaceId}, addMemberDto: ${JSON.stringify(addMemberDto)}, origin: ${origin}`,
     );
+
     try {
-      if (addMemberDto.isMultiple) {
-        if (addMemberDto.members.length > 0) {
-          const resultData = [];
-          for (const memberData of addMemberDto.members) {
-            const existingUser = await this.prisma.user.findUnique({
-              where: { id: memberData.userId },
-              select: {
-                id: true,
-                username: true,
-                email: true,
-                industry: true,
-                WorkSpaces: {
-                  where: {
-                    isConfirmed: true,
-                  },
-                },
-              },
-            });
-            if (!existingUser) {
-              throw new HttpException('User not found', HttpStatus.NOT_FOUND);
-            }
+      const membersToAdd: MemberDto[] = addMemberDto.isMultiple
+        ? addMemberDto.members
+        : [addMemberDto.members[0]];
+      const resultData = await Promise.all(
+        membersToAdd.map((memberData) =>
+          this.processMember(workspaceId, memberData, origin),
+        ),
+      );
 
-            if (existingUser.WorkSpaces.length >= 2) {
-              throw new HttpException(
-                'You are already in two work spaces',
-                HttpStatus.BAD_REQUEST,
-              );
-            }
-            const existingUserWorkSpace =
-              await this.prisma.userWorkSpace.findUnique({
-                where: {
-                  userId_workSpaceId: {
-                    userId: existingUser.id,
-                    workSpaceId: workspaceId,
-                  },
-                },
-                include: {
-                  user: true,
-                  workSpace: true,
-                },
-              });
-            if (existingUserWorkSpace) {
-              if (existingUserWorkSpace.isConfirmed) {
-                throw new HttpException(
-                  'User already exists in this workspace',
-                  HttpStatus.CONFLICT,
-                );
-              } else {
-                resultData.push({
-                  memberId: existingUserWorkSpace.user.id,
-                  // name: existingUserWorkSpace.user.name,
-                  username: existingUserWorkSpace.user.username,
-                  email: existingUserWorkSpace.user.email,
-                  role: existingUserWorkSpace.role,
-                  isConfirmed: existingUserWorkSpace.isConfirmed,
-                  id: existingUserWorkSpace.id,
-                  workSpaceId: existingUserWorkSpace.workSpaceId,
-                });
-                const inviteToken = this.jwtService.sign(
-                  {
-                    memberId: existingUserWorkSpace.id,
-                    userId: existingUserWorkSpace.userId,
-                    workSpaceId: existingUserWorkSpace.workSpaceId,
-                  },
-                  { expiresIn: '7d' },
-                );
-                await this.mailerService.sendInviteEmail(
-                  existingUserWorkSpace.user.email,
-                  inviteToken,
-                  existingUserWorkSpace.workSpace.name,
-                );
-              }
-            } else {
-              const member = await this.prisma.userWorkSpace.create({
-                data: {
-                  userId: existingUser.id,
-                  workSpaceId: workspaceId,
-                  role: memberData.role, // Enum value for the member role
-                },
-                include: {
-                  user: true,
-                  workSpace: true,
-                },
-              });
-              resultData.push({
-                memberId: member.user.id,
-                // name: member.user.name,
-                username: member.user.username,
-                email: member.user.email,
-                role: member.role,
-                isConfirmed: member.isConfirmed,
-                id: member.id,
-                workSpaceId: member.workSpaceId,
-              });
-              const inviteToken = this.jwtService.sign(
-                {
-                  memberId: member.id,
-                  userId: member.userId,
-                  workSpaceId: member.workSpaceId,
-                },
-                { expiresIn: '7d' },
-              );
-              await this.mailerService.sendInviteEmail(
-                member.user.email,
-                inviteToken,
-                member.workSpace.name,
-              );
-            }
-          }
-          return {
-            status: true,
-            message: 'Members added successfully',
-            data: resultData,
-          };
-        }
-      } else {
-        const existingUser = await this.prisma.user.findUnique({
-          where: { id: addMemberDto.members[0].userId },
-          select: {
-            id: true,
-            username: true,
-            email: true,
-            industry: true,
-            WorkSpaces: {
-              where: {
-                isConfirmed: true,
-              },
-            },
-          },
-        });
-        if (!existingUser) {
-          throw new HttpException('User not found', HttpStatus.NOT_FOUND);
-        }
-        if (existingUser.WorkSpaces.length >= 2) {
-          throw new HttpException(
-            'You are already in two work spaces',
-            HttpStatus.BAD_REQUEST,
-          );
-        }
-
-        const existingUserWorkSpace =
-          await this.prisma.userWorkSpace.findUnique({
-            where: {
-              userId_workSpaceId: {
-                userId: existingUser.id,
-                workSpaceId: workspaceId,
-              },
-            },
-            include: {
-              user: true,
-              workSpace: true,
-            },
-          });
-        if (existingUserWorkSpace) {
-          if (existingUserWorkSpace.isConfirmed) {
-            throw new HttpException(
-              'User already exists in this workspace',
-              HttpStatus.CONFLICT,
-            );
-          } else {
-            const inviteToken = this.jwtService.sign(
-              {
-                memberId: existingUserWorkSpace.id,
-                userId: existingUserWorkSpace.userId,
-                workSpaceId: existingUserWorkSpace.workSpaceId,
-              },
-              { expiresIn: '7d' },
-            );
-            await this.mailerService.sendInviteEmail(
-              existingUserWorkSpace.user.email,
-              inviteToken,
-              existingUserWorkSpace.workSpace.name,
-            );
-            const resultData = {
-              memberId: existingUserWorkSpace.user.id,
-              // name: existingUserWorkSpace.user.name,
-              username: existingUserWorkSpace.user.username,
-              email: existingUserWorkSpace.user.email,
-              role: existingUserWorkSpace.role,
-              isConfirmed: existingUserWorkSpace.isConfirmed,
-              id: existingUserWorkSpace.id,
-              workSpaceId: existingUserWorkSpace.workSpaceId,
-            };
-            return {
-              status: true,
-              message: 'Member added successfully',
-              data: resultData,
-            };
-          }
-        } else {
-          const member = await this.prisma.userWorkSpace.create({
-            data: {
-              userId: existingUser.id,
-              workSpaceId: workspaceId,
-              role: addMemberDto.members[0]?.role, // Enum value for the member role
-            },
-            include: {
-              user: true,
-              workSpace: true,
-            },
-          });
-          const inviteToken = this.jwtService.sign(
-            {
-              memberId: member.id,
-              userId: member.userId,
-              workSpaceId: member.workSpaceId,
-            },
-            { expiresIn: '7d' },
-          );
-          await this.mailerService.sendInviteEmail(
-            member.user.email,
-            inviteToken,
-            member.workSpace.name,
-          );
-          const resultData = {
-            memberId: member.user.id,
-            // name: member.user.name,
-            username: member.user.username,
-            email: member.user.email,
-            role: member.role,
-            isConfirmed: member.isConfirmed,
-            id: member.id,
-            workSpaceId: member.workSpaceId,
-          };
-          return {
-            status: true,
-            message: 'Member added successfully',
-            data: resultData,
-          };
-        }
-      }
+      return {
+        status: true,
+        message: 'Members added successfully',
+        data: resultData.filter(Boolean), // Filter out undefined values (if any)
+      };
     } catch (error) {
       this.logger.error(
-        `${this.addMember.name} has an error | error: ${JSON.stringify(error)}`,
+        `${this.addMember.name} error | ${JSON.stringify(error)}`,
       );
       throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
+  }
+
+  private async processMember(
+    workspaceId: string,
+    memberData: MemberDto,
+    origin?: string,
+  ) {
+    this.logger.log(
+      `${this.processMember.name} called | workspaceId: ${workspaceId}, memberData: ${JSON.stringify(memberData)}, origin: ${origin}`,
+    );
+    const existingUser = await this.findUser(memberData.email);
+
+    if (!existingUser) {
+      // TODO: handle Signup Onboarding
+      return await this.handleNewUserInvite(memberData, workspaceId, origin);
+    } else {
+      // this.checkWorkspaceLimit(existingUser);
+
+      const existingUserWorkSpace = await this.findUserWorkspace(
+        existingUser.id,
+        workspaceId,
+        existingUser.email,
+      );
+
+      if (existingUserWorkSpace) {
+        return await this.handleExistingUserWorkspace(
+          existingUserWorkSpace,
+          origin,
+        );
+      } else {
+        return await this.addNewUserToWorkspace(
+          existingUser,
+          workspaceId,
+          memberData.role,
+          origin,
+        );
+      }
+    }
+  }
+
+  private async handleNewUserInvite(
+    memberData: MemberDto,
+    workspaceId: string,
+    origin?: string,
+  ) {
+    this.logger.log(
+      `${this.handleNewUserInvite.name} called | memberData: ${JSON.stringify(
+        memberData,
+      )}, origin: ${origin}, workspaceId: ${workspaceId}`,
+    );
+    // TODO: Send invite email
+    const addNewUserToWorkspace = await this.prisma.userWorkSpace.create({
+      data: {
+        workSpaceId: workspaceId,
+        role: memberData.role,
+        email: memberData.email,
+      },
+      include: { user: true, workSpace: true },
+    });
+
+    await this.sendInvite(
+      true,
+      addNewUserToWorkspace.email,
+      addNewUserToWorkspace.id,
+      addNewUserToWorkspace.userId,
+      addNewUserToWorkspace.workSpaceId,
+      addNewUserToWorkspace.workSpace.name,
+      origin,
+    );
+
+    return {
+      memberId: addNewUserToWorkspace?.user?.id,
+      username: addNewUserToWorkspace?.user?.username,
+      email: addNewUserToWorkspace?.user?.email,
+      role: addNewUserToWorkspace.role,
+      isConfirmed: addNewUserToWorkspace.isConfirmed,
+      id: addNewUserToWorkspace.id,
+      workSpaceId: addNewUserToWorkspace.workSpaceId,
+    };
+  }
+
+  private async findUser(email: string) {
+    this.logger.log(`${this.findUser.name} called | email: ${email}}`);
+    const user = await this.prisma.user.findUnique({
+      where: { email: email },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        industry: true,
+        WorkSpaces: { where: { isConfirmed: true } },
+      },
+    });
+
+    return user;
+  }
+
+  private checkWorkspaceLimit(user: any) {
+    this.logger.log(
+      `${this.processMember.name} called | user: ${JSON.stringify(user)}`,
+    );
+    if (user.WorkSpaces.length >= 2) {
+      throw new HttpException(
+        'User is already in two workspaces',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  private async findUserWorkspace(
+    userId: string,
+    workspaceId: string,
+    email: string,
+  ) {
+    this.logger.log(
+      `${this.findUserWorkspace.name} called | userId: ${userId}, workspaceId: ${workspaceId}}`,
+    );
+    return await this.prisma.userWorkSpace.findUnique({
+      where: {
+        userId_workSpaceId_email: { userId, workSpaceId: workspaceId, email },
+      },
+      include: { user: true, workSpace: true },
+    });
+  }
+
+  private async handleExistingUserWorkspace(
+    existingUserWorkSpace: any,
+    origin?: string,
+  ) {
+    this.logger.log(
+      `${this.handleExistingUserWorkspace.name} called | existingUserWorkSpace: ${JSON.stringify(
+        existingUserWorkSpace,
+      )}, origin: ${origin}`,
+    );
+    if (existingUserWorkSpace.isConfirmed) {
+      throw new HttpException(
+        'User already exists in this workspace',
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    // Calculate the date 7 days ago from now
+    const sevenDaysAgo = addDays(new Date(), -7);
+
+    // Check if the existing invite was created or updated more than 7 days ago
+    const inviteExpired =
+      isAfter(sevenDaysAgo, existingUserWorkSpace.updatedAt) ||
+      isAfter(sevenDaysAgo, existingUserWorkSpace.createdAt);
+
+    if (inviteExpired) {
+      this.logger.debug('Again Invited');
+      await this.sendInvite(
+        false,
+        existingUserWorkSpace.user.email,
+        existingUserWorkSpace.id,
+        existingUserWorkSpace.userId,
+        existingUserWorkSpace.workSpaceId,
+        existingUserWorkSpace.workSpace.name,
+        origin,
+      );
+      // Update the updatedAt field to the current date
+      await this.prisma.userWorkSpace.update({
+        where: { id: existingUserWorkSpace.id },
+        data: { updatedAt: new Date() },
+      });
+    }
+
+    return {
+      memberId: existingUserWorkSpace.user.id,
+      username: existingUserWorkSpace.user.username,
+      email: existingUserWorkSpace.user.email,
+      role: existingUserWorkSpace.role,
+      isConfirmed: existingUserWorkSpace.isConfirmed,
+      id: existingUserWorkSpace.id,
+      workSpaceId: existingUserWorkSpace.workSpaceId,
+    };
+  }
+
+  private async addNewUserToWorkspace(
+    user: any,
+    workspaceId: string,
+    role: Role,
+    origin?: string,
+  ) {
+    this.logger.log(
+      `${this.addNewUserToWorkspace.name} called | user: ${JSON.stringify(user)}, workspaceId: ${workspaceId}, role: ${role}}, origin: ${origin}`,
+    );
+    const newUserWorkspace = await this.prisma.userWorkSpace.create({
+      data: { userId: user.id, workSpaceId: workspaceId, role },
+      include: { user: true, workSpace: true },
+    });
+
+    await this.sendInvite(
+      false,
+      newUserWorkspace.user.email,
+      newUserWorkspace.id,
+      newUserWorkspace.userId,
+      newUserWorkspace.workSpaceId,
+      newUserWorkspace.workSpace.name,
+      origin,
+    );
+
+    return {
+      memberId: newUserWorkspace.user.id,
+      username: newUserWorkspace.user.username,
+      email: newUserWorkspace.user.email,
+      role: newUserWorkspace.role,
+      isConfirmed: newUserWorkspace.isConfirmed,
+      id: newUserWorkspace.id,
+      workSpaceId: newUserWorkspace.workSpaceId,
+    };
+  }
+
+  private async sendInvite(
+    isSignUp: boolean,
+    email: string,
+    memberId: string,
+    userId: string,
+    workspaceId: string,
+    workspaceName: string,
+    origin?: string,
+  ) {
+    this.logger.log(
+      `${this.sendInvite.name} called | params: ${JSON.stringify({
+        isSignUp,
+        email,
+        memberId,
+        userId,
+        workspaceId,
+        workspaceName,
+        origin,
+      })}`,
+    );
+    const inviteToken = this.jwtService.sign(
+      { memberId, userId, workspaceId, email },
+      { expiresIn: '7d' },
+    );
+
+    await this.mailerService.sendInviteEmail(
+      isSignUp,
+      email,
+      inviteToken,
+      workspaceName,
+      origin,
+    );
   }
 
   async acceptInvite(token: string) {
@@ -600,70 +658,74 @@ export class WorkspacesService {
     );
     try {
       const decodedToken = this.jwtService.verify(token);
-      const { memberId, userId, workSpaceId } = decodedToken as {
+      const { memberId, userId, workspaceId, email } = decodedToken as {
         memberId: string;
         userId: string;
-        workSpaceId: string;
+        workspaceId: string;
+        email: string;
       };
+
+      const user = await this.prisma.user.findUnique({
+        where: {
+          email,
+        },
+      });
+
+      if (!user) {
+        throw new BadRequestException('You are not Registered yet.');
+      }
 
       const existingUserWorkSpace = await this.prisma.userWorkSpace.findUnique({
         where: {
-          userId_workSpaceId: {
-            userId,
-            workSpaceId,
-          },
+          id: memberId,
         },
       });
 
       if (!existingUserWorkSpace) {
-        throw new HttpException(
-          'Invalid invite token',
-          HttpStatus.UNAUTHORIZED,
-        );
+        throw new HttpException('Invalid invite token', HttpStatus.BAD_REQUEST);
       }
 
-      const user = await this.prisma.user.findUnique({
-        where: {
-          id: userId,
-        },
-        select: {
-          id: true,
-          username: true,
-          email: true,
-          industry: true,
-          WorkSpaces: {
-            where: {
-              isConfirmed: true,
-            },
-          },
-        },
-      });
-
-      if (user.WorkSpaces.length >= 2) {
+      if (existingUserWorkSpace.isConfirmed) {
         throw new HttpException(
-          'You are already in two work spaces',
+          'Invite already accepted',
           HttpStatus.BAD_REQUEST,
         );
       }
 
-      const memberData = await this.prisma.userWorkSpace.findFirst({
-        where: { id: memberId, isConfirmed: false },
-        include: {
-          user: true,
-          workSpace: true,
-        },
-      });
+      // const user = await this.prisma.user.findUnique({
+      //   where: {
+      //     id: userId,
+      //   },
+      //   select: {
+      //     id: true,
+      //     username: true,
+      //     email: true,
+      //     industry: true,
+      //     WorkSpaces: {
+      //       where: {
+      //         isConfirmed: true,
+      //       },
+      //     },
+      //   },
+      // });
 
-      if (!memberData) {
-        throw new HttpException(
-          'Invite Link is Expired',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
+      // if (user.WorkSpaces.length >= 2) {
+      //   await this.prisma.userWorkSpace.delete({
+      //     where: { id: existingUserWorkSpace.id },
+      //   });
+      //   throw new HttpException(
+      //     'You are already in two work spaces',
+      //     HttpStatus.BAD_REQUEST,
+      //   );
+      // }
 
       await this.prisma.userWorkSpace.update({
         where: { id: existingUserWorkSpace.id },
-        data: { isConfirmed: true },
+        data: {
+          isConfirmed: true,
+          userId: user.id,
+          updatedAt: existingUserWorkSpace.updatedAt,
+        },
       });
 
       return {
@@ -674,7 +736,7 @@ export class WorkspacesService {
       this.logger.error(
         `${this.acceptInvite.name} has an error | error: ${JSON.stringify(error)}`,
       );
-      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      throw error;
     }
   }
 }
