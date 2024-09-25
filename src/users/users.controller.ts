@@ -35,9 +35,9 @@ export class UsersController {
     };
     return await this.usersService.getUsers(filter, req.user);
   }
-  @UseGuards(LocalAuthGuard)
+  // @UseGuards(LocalAuthGuard)
   @Post('check-email')
   async verifyUser(@Body() body: VerifyEmailDto, @Req() req) {
-    return await this.usersService.verifyUser(body.email, req.user);
+    return await this.usersService.verifyUser(body.email);
   }
 }

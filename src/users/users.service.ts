@@ -84,7 +84,7 @@ export class UsersService {
     }
   }
 
-  async verifyUser(email: string, loggedInUser: JwtPayload) {
+  async verifyUser(email: string) {
     this.logger.log(
       `${this.verifyUser.name} has been called | email: ${email}`,
     );
@@ -106,7 +106,7 @@ export class UsersService {
       } else {
         return {
           status: true,
-          message: 'User verified successfully',
+          message: 'User not exists',
         };
       }
     } catch (error) {
