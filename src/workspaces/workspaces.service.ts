@@ -18,7 +18,7 @@ import { User } from '@prisma/client';
 import { Role } from '@prisma/client';
 import { MailerService } from 'src/mailer/mailer.service';
 import { JwtService } from '@nestjs/jwt';
-import { addDays, isAfter } from 'date-fns';
+import { addDays, addMinutes, isAfter } from 'date-fns';
 
 @Injectable()
 export class WorkspacesService {
@@ -179,7 +179,7 @@ export class WorkspacesService {
 
       // Check if the user's createdAt is older than 3 days
       const createdAt = new Date(userDetails.createdAt);
-      const threeDaysAgo = addDays(new Date(), -3);
+      const threeDaysAgo = addMinutes(new Date(), -3);
 
       const profileDetails = {
         workspace: {
