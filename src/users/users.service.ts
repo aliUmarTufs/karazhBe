@@ -125,7 +125,7 @@ export class UsersService {
       const uniqueUsername = await this.generateUniqueUsername(
         userDetails.email.split('@')[0],
       );
-      return this.prisma.user.create({
+      return await this.prisma.user.create({
         data: {
           email: userDetails.email,
           password: await this.hashPassword(userDetails.password),
@@ -185,7 +185,7 @@ export class UsersService {
   }
 
   private async usernameExists(username: string): Promise<boolean> {
-    const user = await this.prisma.user.findUnique({
+    const user = await this.prisma.user.findFirst({
       where: { username },
     });
     return !!user;

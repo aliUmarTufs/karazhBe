@@ -15,10 +15,10 @@ datasource db {
 
 model User {
   id             String         @id @default(cuid())
-  username       String         @unique
+  username       String         
   email          String         @unique
   password       String
-  name           String?
+  // name           String?
   industry       String?
   isVerified     Boolean        @default(false)
   createdAt      DateTime       @default(now())

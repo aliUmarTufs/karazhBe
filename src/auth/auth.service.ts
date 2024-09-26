@@ -348,25 +348,35 @@ export class AuthService {
   }
 
   async updateProfile(data: profileDto, userId: string) {
-    const checkIfUserExists = await this.prisma.user.findFirst({
-      where: { id: userId },
-    });
+    this.logger.log(
+      `${this.updateProfile.name} has been called | userId: ${userId}`,
+    );
+    try {
+      const checkIfUserExists = await this.prisma.user.findFirst({
+        where: { id: userId },
+      });
 
-    if (!checkIfUserExists) {
-      throw new BadRequestException('User not found');
+      if (!checkIfUserExists) {
+        throw new BadRequestException('User not found');
+      }
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          ...data,
+        },
+      });
+
+      return {
+        status: true,
+        message: 'Profile updated successfully',
+        data: [],
+      };
+    } catch (error) {
+      this.logger.error(
+        `${this.updateProfile.name} got an Error: ${JSON.stringify(error)}`,
+      );
+      throw new BadRequestException(error.message);
     }
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        ...data,
-      },
-    });
-
-    return {
-      status: true,
-      message: 'Profile updated successfully',
-      data: [],
-    };
   }
 
   async getProfile(user: JwtPayload) {
