@@ -89,18 +89,77 @@ export class WorkspacesService {
     this.logger.log(
       `${this.getUserWorkSpaces.name} has been called | userId: ${userId}, query: ${JSON.stringify(query)}`,
     );
+
     try {
-      const userWorkspaces = await this.prisma.userWorkSpace.findMany({
-        where: { userId, isConfirmed: true },
+      const allWorkspaces = [];
+      let creatorIncluded = false;
+
+      // Only fetch the creator's workspace on the first call (offset = 0)
+      if (+query.offset === 0) {
+        const myWorkspace = await this.prisma.userWorkSpace.findFirst({
+          where: {
+            userId,
+            role: 'CREATOR',
+            isConfirmed: true,
+          },
+          include: {
+            workSpace: true,
+          },
+        });
+        if (myWorkspace) {
+          allWorkspaces.push(myWorkspace); // Add the CREATOR workspace to the result
+          creatorIncluded = true; // Set flag that the creator workspace was included
+        }
+      }
+
+      const limit = query.limit
+        ? Math.max(0, +query.limit - (creatorIncluded ? 1 : 0))
+        : undefined; // Limit adjusted
+
+      const offset = query.offset
+        ? +query.offset > 0 && !creatorIncluded
+          ? +query.offset - 1
+          : +query.offset
+        : 0; // Adjust offset if creator is not included
+
+      // Fetch other workspaces excluding the 'CREATOR' one
+      const otherWorkspaces = await this.prisma.userWorkSpace.findMany({
+        where: {
+          userId,
+          role:
+            query.limit && query.offset
+              ? {
+                  not: 'CREATOR',
+                }
+              : undefined,
+          isConfirmed: true,
+        },
         include: {
           workSpace: true,
         },
-        take: query.limit ? +query.limit : undefined,
-        skip: query.offset ? +query.offset : undefined,
-        // orderBy: { role: 'CREATOR' },
+        take: limit && limit > 0 ? limit : undefined, // Take adjusted
+        skip: offset && offset > 0 ? offset : undefined, // Skip adjusted,
+        orderBy: query.limit && query.offset ? { updatedAt: 'asc' } : undefined,
       });
 
-      const workSpaceData = await userWorkspaces.map((uw) => ({
+      // Add other workspaces to the result
+      allWorkspaces.push(...otherWorkspaces);
+
+      // If no limit and offset are provided, sort the data
+      if (!query.limit && !query.offset) {
+        allWorkspaces.sort((a, b) => {
+          // Prioritize the 'CREATOR' role first
+          if (a.role === 'CREATOR') return -1; // CREATOR comes first
+          if (b.role === 'CREATOR') return 1;
+
+          // Sort by invite acceptance date (updatedAt)
+          return (
+            new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime()
+          ); // Earlier invite comes first
+        });
+      }
+
+      const workSpaceData = allWorkspaces.map((uw) => ({
         id: uw.workSpace.id,
         name: uw.workSpace.name,
         role: uw.role,
@@ -114,7 +173,8 @@ export class WorkspacesService {
 
       return {
         status: true,
-        message: 'WorkSpace Fetched Succesfully',
+        message: 'WorkSpace Fetched Successfully',
+        count: workSpaceData.length,
         data: workSpaceData,
       };
     } catch (error) {
@@ -176,6 +236,13 @@ export class WorkspacesService {
       });
 
       this.logger.log(userWorkspaces);
+
+      if (!userWorkspaces) {
+        throw new HttpException(
+          'You are not a part of this workspace',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
 
       // Check if the user's createdAt is older than 3 days
       const createdAt = new Date(userDetails.createdAt);
@@ -544,7 +611,7 @@ export class WorkspacesService {
     if (existingUserWorkSpace.isConfirmed) {
       throw new HttpException(
         'User already exists in this workspace',
-        HttpStatus.CONFLICT,
+        HttpStatus.BAD_REQUEST,
       );
     }
 
@@ -726,13 +793,14 @@ export class WorkspacesService {
         data: {
           isConfirmed: true,
           userId: user.id,
-          updatedAt: existingUserWorkSpace.updatedAt,
+          updatedAt: new Date(),
         },
       });
 
       return {
         status: true,
         message: 'Invite accepted successfully.',
+        workspaceId,
       };
     } catch (error) {
       this.logger.error(
