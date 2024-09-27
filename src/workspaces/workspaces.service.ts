@@ -246,7 +246,7 @@ export class WorkspacesService {
 
       // Check if the user's createdAt is older than 3 days
       const createdAt = new Date(userDetails.createdAt);
-      const threeDaysAgo = addMinutes(new Date(), -3);
+      const threeDaysAgo = addMinutes(new Date(), -15);
 
       const profileDetails = {
         workspace: {

@@ -141,7 +141,7 @@ export class AuthService {
       );
       // Check if the user's createdAt is older than 3 days
       const createdAt = new Date(newUserDetails.createdAt);
-      const threeDaysAgo = addMinutes(new Date(), -3);
+      const threeDaysAgo = addMinutes(new Date(), -15);
 
       return {
         user: {
@@ -189,7 +189,7 @@ export class AuthService {
 
       // Check if the user's createdAt is older than 3 days
       const createdAt = new Date(user.createdAt);
-      const threeDaysAgo = addMinutes(new Date(), -3);
+      const threeDaysAgo = addMinutes(new Date(), -15);
 
       return {
         status: true,
@@ -349,7 +349,7 @@ export class AuthService {
 
   async updateProfile(data: profileDto, userId: string) {
     this.logger.log(
-      `${this.updateProfile.name} has been called | userId: ${userId}`,
+      `${this.updateProfile.name} has been called | userId: ${userId}, data: ${JSON.stringify(data)}`,
     );
     try {
       const checkIfUserExists = await this.prisma.user.findFirst({
@@ -396,7 +396,7 @@ export class AuthService {
 
       // Check if the user's createdAt is older than 3 days
       const createdAt = new Date(userDetails.createdAt);
-      const threeDaysAgo = addMinutes(new Date(), -3);
+      const threeDaysAgo = addMinutes(new Date(), -15);
 
       return {
         status: true,
@@ -482,7 +482,7 @@ export class AuthService {
       });
       // Check if the user's createdAt is older than 3 days
       const createdAt = new Date(verifyUser.createdAt);
-      const threeDaysAgo = addMinutes(new Date(), -3);
+      const threeDaysAgo = addMinutes(new Date(), -15);
 
       return {
         status: true,
