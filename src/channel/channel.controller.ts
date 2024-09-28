@@ -1,9 +1,20 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
 import { ChannelService } from './channel.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
 import { LocalAuthGuard } from 'src/auth/local-auth.guard';
 import { SocialMediaPlatform } from 'src/enum/SocialMediaPlatform';
+import { WorkSpaceAdminGuard } from 'src/guards/workspace-admin.guard';
 
 @Controller('channel')
 export class ChannelController {
@@ -14,7 +25,7 @@ export class ChannelController {
     return this.channelService.update(+id, updateChannelDto);
   }
 
-  @UseGuards(LocalAuthGuard)
+  @UseGuards(LocalAuthGuard, WorkSpaceAdminGuard)
   @Post('create-channel')
   async createChannel(
     @Body() body: { name: string; userId: string; workSpaceId: string },

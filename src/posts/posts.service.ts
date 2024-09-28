@@ -384,7 +384,7 @@ export class PostsService {
         filterPostsDto;
 
       const where = {
-        userId,
+        // userId,
         workSpaceId,
         deletedAt: null,
         AND: [

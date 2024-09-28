@@ -23,7 +23,7 @@ export class WorkSpaceAdminGuard implements CanActivate {
       return false;
     }
 
-    const { workspaceId } = request.params;
+    const workspaceId = request.params.workspaceId || request.body.workSpaceId;
 
     // Validate if workspaceId is present
     if (!workspaceId) {
