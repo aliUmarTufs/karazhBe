@@ -141,7 +141,7 @@ export class AuthService {
       );
       // Check if the user's createdAt is older than 3 days
       const createdAt = new Date(newUserDetails.createdAt);
-      const threeDaysAgo = addMinutes(new Date(), -15);
+      const threeDaysAgo = addDays(new Date(), -3);
 
       return {
         user: {
@@ -189,7 +189,7 @@ export class AuthService {
 
       // Check if the user's createdAt is older than 3 days
       const createdAt = new Date(user.createdAt);
-      const threeDaysAgo = addMinutes(new Date(), -15);
+      const threeDaysAgo = addDays(new Date(), -3);
 
       return {
         status: true,
@@ -396,7 +396,7 @@ export class AuthService {
 
       // Check if the user's createdAt is older than 3 days
       const createdAt = new Date(userDetails.createdAt);
-      const threeDaysAgo = addMinutes(new Date(), -15);
+      const threeDaysAgo = addDays(new Date(), -3);
 
       return {
         status: true,
@@ -482,7 +482,7 @@ export class AuthService {
       });
       // Check if the user's createdAt is older than 3 days
       const createdAt = new Date(verifyUser.createdAt);
-      const threeDaysAgo = addMinutes(new Date(), -15);
+      const threeDaysAgo = addDays(new Date(), -3);
 
       return {
         status: true,
