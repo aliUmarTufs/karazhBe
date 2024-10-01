@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -67,6 +68,10 @@ export class WorkspacesController {
     @Body() body: { id?: string; role?: Role; isConfirmed?: boolean },
     @Req() req,
   ) {
+    const allowedRolesForUpdate: Role[] = ['MEMBER', 'ADMIN'];
+    if (!allowedRolesForUpdate.includes(body.role)) {
+      throw new BadRequestException('Role must be either MEMBER or ADMIN');
+    }
     return await this.workspacesService.updateMember(body?.id, body, req.user);
   }
 

@@ -11,6 +11,7 @@ import {
   ValidateIf,
   ValidateNested,
   IsEmail,
+  IsIn,
 } from 'class-validator';
 
 export class CreateWorkspaceDto {
@@ -50,6 +51,8 @@ export class MemberDto {
   email: string;
 
   @IsNotEmpty()
-  @IsEnum(Role)
+  @IsIn([Role.MEMBER, Role.ADMIN], {
+    message: 'Role must be either MEMBER or ADMIN',
+  })
   role: Role;
 }
