@@ -28,9 +28,32 @@ export class ChannelController {
   @UseGuards(LocalAuthGuard, WorkSpaceAdminGuard)
   @Post('create-channel')
   async createChannel(
-    @Body() body: { name: string; userId: string; workSpaceId: string, authToken: string },
+    @Body()
+    body: {
+      name: string;
+      userId: string;
+      workSpaceId: string;
+      authToken: string;
+    },
   ) {
     return await this.channelService.createChannel(body);
+  }
+
+  @UseGuards(LocalAuthGuard)
+  @Post('get-access-token')
+  async getAccessToken(
+    @Body()
+    body: {
+      authorizationToken: string;
+    },
+  ) {
+    return await this.channelService.getAccessToken(body.authorizationToken);
+  }
+
+  @UseGuards(LocalAuthGuard)
+  @Delete('delete-channel/:channelId')
+  async deleteChannel(@Param('channelId') channelId: string, @Req() req) {
+    return await this.channelService.deleteChannel(channelId, req.user);
   }
 
   @UseGuards(LocalAuthGuard)
