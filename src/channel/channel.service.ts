@@ -85,6 +85,38 @@ export class ChannelService {
     }
   }
 
+  async deleteChannel(channelId: string, user: JwtPayload) {
+    this.logger.log(
+      `${this.getMyChannels.name} has been called | channelId: ${channelId}}`,
+    );
+
+    try {
+      const { userId } = user;
+      const loggedInUser = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+      if (!loggedInUser) {
+        throw new UnauthorizedException('User not found');
+      }
+      await this.prisma.channel.delete({
+        where: { id: channelId },
+      });
+      return {
+        status: true,
+        message: 'Channels deleted successfully',
+      };
+    } catch (error) {
+      this.logger.error(
+        `${this.getMyChannels.name} got an Error: ${JSON.stringify(error)}`,
+      );
+      return {
+        status: false,
+        message: error.message,
+        error,
+      };
+    }
+  }
+
   async getMyChannels(workspaceId: string, user: JwtPayload) {
     this.logger.log(
       `${this.getMyChannels.name} has been called | workspaceId: ${workspaceId}, user: ${JSON.stringify(user)}}`,
