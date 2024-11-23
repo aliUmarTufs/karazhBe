@@ -80,13 +80,13 @@ export class PostsService {
           );
         }
 
-        // if (channelNames && channelNames.length > 0) {
-        //   if (createPostDto.status === 'PUBLISHED') {
-        //     for (const x of channelsArray) {
-        //       await this.handleChannel(createPostDto, x.name);
-        //     }
-        //   }
-        // }
+        if (channelNames && channelNames.length > 0) {
+          if (createPostDto.status === 'PUBLISHED') {
+            for (const x of channelsArray) {
+              await this.handleChannel(createPostDto, x.name, x.id);
+            }
+          }
+        }
 
         // Create the post
         const createPost = await this.prisma.post.create({
@@ -165,12 +165,19 @@ export class PostsService {
     }
   }
 
-  async handleChannel(postData: any, channelName: any) {
+  async handleChannel(postData: any, channelName: any, channelId: string) {
     switch (channelName.toUpperCase()) {
       case 'LINKEDIN':
         console.log('Processing LinkedIn channel...');
-        //const getChannelId = 
-        await this.publishContentToLinkedin(postData);
+        const getChannelToken = await this.prisma.channel.findFirst({
+          where: {
+            id: channelId,
+          },
+        });
+        await this.publishContentToLinkedin(
+          postData,
+          getChannelToken.authToken,
+        );
         break;
 
       case 'INSTAGRAM':
@@ -194,14 +201,14 @@ export class PostsService {
     }
   }
 
-  async publishContentToLinkedin(postData: any) {
-    const getUserProfileDetails = await this.getUserProfile(postData.authToken);
+  async publishContentToLinkedin(postData: any, authToken: string) {
+    const getUserProfileDetails = await this.getUserProfile(authToken);
     try {
-      const userPlatformId = getUserProfileDetails.data.sub;
+      const userPlatformId = getUserProfileDetails.sub;
       if (userPlatformId) {
         await this.createLinkedInPost(
           userPlatformId,
-          postData.authToken,
+          authToken,
           postData.content,
         );
       } else {
