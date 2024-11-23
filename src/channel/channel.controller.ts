@@ -40,6 +40,17 @@ export class ChannelController {
   }
 
   @UseGuards(LocalAuthGuard)
+  @Post('get-access-token')
+  async getAccessToken(
+    @Body()
+    body: {
+      authorizationToken: string;
+    },
+  ) {
+    return await this.channelService.getAccessToken(body.authorizationToken);
+  }
+
+  @UseGuards(LocalAuthGuard)
   @Delete('delete-channel/:channelId')
   async deleteChannel(@Param('channelId') channelId: string, @Req() req) {
     return await this.channelService.deleteChannel(channelId, req.user);

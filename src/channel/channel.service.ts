@@ -8,12 +8,17 @@ import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { JwtPayload } from 'jsonwebtoken';
+import { HttpService } from '@nestjs/axios';
+import { lastValueFrom } from 'rxjs';
 
 @Injectable()
 export class ChannelService {
   private readonly logger = new Logger(ChannelService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly httpService: HttpService,
+  ) {}
   create(createChannelDto: CreateChannelDto) {
     return 'This action adds a new channel';
   }
@@ -114,6 +119,42 @@ export class ChannelService {
         message: error.message,
         error,
       };
+    }
+  }
+
+  async getAccessToken(authorizationToken: string) {
+    const url = 'https://www.linkedin.com/oauth/v2/accessToken';
+    const body = {
+      grant_type: 'authorization_code',
+      code: authorizationToken,
+      client_id: process.env.LINKEDIN_SECRET_ID,
+      client_secret: process.env.LINKEDIN_SECRET_KEY,
+      redirect_uri: process.env.LINKEDIN_REDIRECT_URI,
+    };
+
+    const headers = {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    };
+
+    const formBody = new URLSearchParams(body);
+
+    try {
+      const response = await lastValueFrom(
+        this.httpService.post(url, formBody, { headers }),
+      );
+      return {
+        status: true,
+        data: {
+          accessToken: response.data.access_token,
+        },
+        message: 'Access token retrieved successfully.',
+      };
+    } catch (error) {
+      console.error(
+        'Error fetching access token:',
+        error.response?.data || error.message,
+      );
+      throw error;
     }
   }
 
