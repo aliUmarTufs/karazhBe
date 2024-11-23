@@ -135,6 +135,12 @@ export class PostsService {
           workSpaceId: completePostData.workSpaceId,
           channels: channelData,
         };
+
+        if(completePostData.status === 'PUBLISHED'){
+
+          const checkIfContentPublished = await this.publishContentToPlatform(postData)
+
+        }
         return {
           status: true,
           message: 'Your post has been created!',
@@ -154,6 +160,16 @@ export class PostsService {
         error,
       };
     }
+  }
+
+  async publishContentToPlatform(postData){
+
+    const getUserProfileDetails = await this.getUserProfile()
+
+  }
+
+  async getUserProfile() {
+    
   }
 
   async updatePost(postId: string, updatePostDto: UpdatePostDto) {
