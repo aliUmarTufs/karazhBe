@@ -384,37 +384,41 @@ export class PostsService {
         filterPostsDto;
 
       const where = {
-        userId,
+        // userId,
         workSpaceId,
         deletedAt: null,
         AND: [
           status === 'ALL'
             ? {
-                OR: [
-                  {
-                    status: {
-                      not: PostStatus.IDEA,
-                    },
-                    scheduledAt: {
-                      not: null, // Ensure scheduledAt is not null for DRAFT posts in 'ALL' case
-                    },
-                  },
-                  {
-                    status: PostStatus.DRAFT,
-                    scheduledAt: {
-                      not: null, // Ensure scheduledAt is not null for DRAFT posts in 'ALL' case
-                    },
-                  },
-                ],
+                status: {
+                  not: PostStatus.IDEA,
+                },
+                // OR: [
+                //   {
+                //     status: {
+                //       not: PostStatus.IDEA,
+                //     },
+                //     scheduledAt: {
+                //       not: null, // Ensure scheduledAt is not null for DRAFT posts in 'ALL' case
+                //     },
+                //   },
+                //   {
+                //     status: PostStatus.DRAFT,
+                //     scheduledAt: {
+                //       not: null, // Ensure scheduledAt is not null for DRAFT posts in 'ALL' case
+                //     },
+                //   },
+                // ],
               }
-            : status === 'DRAFT'
-              ? {
-                  status: status as PostStatus,
-                  scheduledAt: {
-                    not: null, // Ensure only scheduled drafts are fetched when status is 'DRAFT'
-                  },
-                }
-              : { status: status as PostStatus },
+            : // status === 'DRAFT'
+              //   ? {
+              //       status: status as PostStatus,
+              //       scheduledAt: {
+              //         not: null, // Ensure only scheduled drafts are fetched when status is 'DRAFT'
+              //       },
+              //     }
+              //   :
+              { status: status as PostStatus },
           startDate && endDate
             ? {
                 OR: [
@@ -509,7 +513,7 @@ export class PostsService {
 
       const ideasForContent = await this.prisma.post.findMany({
         where: {
-          userId,
+          // userId,
           workSpaceId,
           status: PostStatus.IDEA,
           scheduledAt: null,
@@ -555,10 +559,10 @@ export class PostsService {
 
       const draftsForContent = await this.prisma.post.findMany({
         where: {
-          userId,
+          // userId,
           workSpaceId,
           status: PostStatus.DRAFT,
-          scheduledAt: null,
+          // scheduledAt: null,
           deletedAt: null,
         },
         include: {

@@ -15,10 +15,10 @@ datasource db {
 
 model User {
   id             String         @id @default(cuid())
-  username       String         @unique
+  username       String         
   email          String         @unique
   password       String
-  name           String?
+  // name           String?
   industry       String?
   isVerified     Boolean        @default(false)
   createdAt      DateTime       @default(now())
@@ -47,17 +47,20 @@ model WorkSpace {
 
 model UserWorkSpace {
   id          String   @id @default(cuid())
-  userId      String
+  userId      String?
+  email       String?
   workSpaceId String
   role        Role
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  isConfirmed Boolean? @default(false)
+  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   workSpace   WorkSpace @relation(fields: [workSpaceId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  @@unique([userId, workSpaceId])
+  @@unique([userId, workSpaceId, email])
   @@index([userId])
   @@index([workSpaceId])
+  @@index([email])
 }
 
 enum Role {

@@ -15,6 +15,10 @@ export class AuthDto {
   @IsString()
   @Length(6, 20) // Minimum length of 6 and maximum length of 20 characters
   password: string;
+
+  @IsOptional()
+  @IsString()
+  token?: string;
 }
 
 export class UserDto {
@@ -26,7 +30,7 @@ export class UserDto {
 export class profileDto {
   @IsNotEmpty()
   @IsString()
-  name: string;
+  username: string;
 
   @IsOptional()
   @IsString()

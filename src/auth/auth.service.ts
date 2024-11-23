@@ -1,5 +1,8 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   BadRequestException,
+  HttpException,
+  HttpStatus,
   Injectable,
   Logger,
   UnauthorizedException,
@@ -14,8 +17,7 @@ import { AuthDto, profileDto, UserDto } from '../auth/dto/create-auth.dto';
 import { JwtPayload } from './jwt-payload.interface';
 import { WorkspacesService } from 'src/workspaces/workspaces.service';
 import { CreateWorkspaceDto } from 'src/workspaces/dto/create-workspace.dto';
-import { SocialMediaPlatform } from 'src/enum/SocialMediaPlatform';
-import { validate } from 'class-validator';
+import { addDays, addMinutes } from 'date-fns';
 
 @Injectable()
 export class AuthService {
@@ -29,18 +31,93 @@ export class AuthService {
     private mailerService: MailerService, // Ensure this is added
   ) {}
 
-  async signUp(authDto: AuthDto) {
+  async signUp(authDto: AuthDto, origin?: string) {
     this.logger.log(
-      `${this.signUp.name} has been called | authDto: ${JSON.stringify(authDto)}`,
+      `${this.signUp.name} has been called | authDto: ${JSON.stringify(authDto)}, origin: ${origin}`,
     );
     try {
       const checkIfUserExists = await this.usersService.findOneByEmail(
         authDto.email,
       );
       if (checkIfUserExists) {
+        // if (authDto?.token) {
+        //   const decodedToken = this.jwtService.verify(authDto.token);
+        //   const { memberId, userId, workSpaceId, email } = decodedToken as {
+        //     memberId: string;
+        //     userId: string;
+        //     workSpaceId: string;
+        //     email: string;
+        //   };
+
+        //   const existingUserWorkSpace =
+        //     await this.prisma.userWorkSpace.findUnique({
+        //       where: {
+        //         id: memberId,
+        //       },
+        //     });
+        //   if (!existingUserWorkSpace) {
+        //     throw new HttpException(
+        //       'Invalid invite token',
+        //       HttpStatus.BAD_REQUEST,
+        //     );
+        //   }
+
+        //   if (existingUserWorkSpace.isConfirmed) {
+        //     throw new HttpException(
+        //       'Invite already accepted',
+        //       HttpStatus.BAD_REQUEST,
+        //     );
+        //   }
+        //   await this.prisma.userWorkSpace.update({
+        //     where: { id: existingUserWorkSpace.id },
+        //     data: {
+        //       userId: checkIfUserExists.id,
+        //       isConfirmed: true,
+        //       updatedAt: existingUserWorkSpace.updatedAt,
+        //     },
+        //   });
+        // }
         throw new BadRequestException('User already exists');
       }
       const newUserDetails = await this.usersService.create(authDto);
+
+      if (authDto?.token) {
+        const decodedToken = this.jwtService.verify(authDto.token);
+        const { memberId, userId, workSpaceId, email } = decodedToken as {
+          memberId: string;
+          userId: string;
+          workSpaceId: string;
+          email: string;
+        };
+
+        const existingUserWorkSpace =
+          await this.prisma.userWorkSpace.findUnique({
+            where: {
+              id: memberId,
+            },
+          });
+        if (!existingUserWorkSpace) {
+          throw new HttpException(
+            'Invalid invite token',
+            HttpStatus.BAD_REQUEST,
+          );
+        }
+
+        if (existingUserWorkSpace.isConfirmed) {
+          throw new HttpException(
+            'Invite already accepted',
+            HttpStatus.BAD_REQUEST,
+          );
+        }
+        await this.prisma.userWorkSpace.update({
+          where: { id: existingUserWorkSpace.id },
+          data: {
+            userId: newUserDetails.id,
+            isConfirmed: true,
+            updatedAt: existingUserWorkSpace.updatedAt,
+          },
+        });
+      }
 
       const getTokens = await this.generateTokens(newUserDetails);
 
@@ -56,11 +133,25 @@ export class AuthService {
         newUserDetails,
       );
 
-      const msg = await this.sendEmailVerification({
-        email: newUserDetails.email,
-      });
+      const msg = await this.sendEmailVerification(
+        {
+          email: newUserDetails.email,
+        },
+        origin,
+      );
+      // Check if the user's createdAt is older than 3 days
+      const createdAt = new Date(newUserDetails.createdAt);
+      const threeDaysAgo = addDays(new Date(), -3);
+
       return {
-        user: newUserDetails,
+        user: {
+          ...newUserDetails,
+          isFreeze: !newUserDetails.isVerified
+            ? createdAt < threeDaysAgo
+              ? true
+              : false
+            : false,
+        },
         ...msg,
         access_token: getTokens.access_token,
         refresh_token: getTokens.refresh_token,
@@ -73,7 +164,7 @@ export class AuthService {
     }
   }
 
-  async validateUser(email: string, password: string): Promise<any> {
+  async validateUser(email: string, password: string) {
     const user = await this.usersService.findOneByEmail(email);
     const checkPass = await bcrypt.compare(password, user?.password);
     if (user && checkPass) {
@@ -96,6 +187,10 @@ export class AuthService {
 
       const getTokens = await this.generateTokens(user);
 
+      // Check if the user's createdAt is older than 3 days
+      const createdAt = new Date(user.createdAt);
+      const threeDaysAgo = addDays(new Date(), -3);
+
       return {
         status: true,
         message: 'User logged in successfully',
@@ -105,6 +200,11 @@ export class AuthService {
             email: user.email,
             username: user.username, // Include any other user details you need
             isVerified: user.isVerified,
+            isFreeze: !user.isVerified
+              ? createdAt < threeDaysAgo
+                ? true
+                : false
+              : false,
           },
           access_token: getTokens.access_token,
           refresh_token: getTokens.refresh_token,
@@ -234,7 +334,7 @@ export class AuthService {
     return await this.otpService.generateOtp(email);
   }
 
-  async forgetPassword(email: string) {
+  async forgetPassword(email: string, origin?: string) {
     const user = await this.usersService.findOneByEmail(email);
     if (!user) {
       throw new UnauthorizedException('User not found');
@@ -242,31 +342,87 @@ export class AuthService {
 
     // Generate reset token and send email
     const resetToken = this.jwtService.sign({ email }, { expiresIn: '1h' });
-    await this.mailerService.sendResetPasswordEmail(email, resetToken);
+    await this.mailerService.sendResetPasswordEmail(email, resetToken, origin);
 
     return { message: 'Password reset email sent' };
   }
 
   async updateProfile(data: profileDto, userId: string) {
-    const checkIfUserExists = await this.prisma.user.findFirst({
-      where: { id: userId },
-    });
+    this.logger.log(
+      `${this.updateProfile.name} has been called | userId: ${userId}, data: ${JSON.stringify(data)}`,
+    );
+    try {
+      const checkIfUserExists = await this.prisma.user.findFirst({
+        where: { id: userId },
+      });
 
-    if (!checkIfUserExists) {
-      throw new BadRequestException('User not found');
+      if (!checkIfUserExists) {
+        throw new BadRequestException('User not found');
+      }
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          ...data,
+        },
+      });
+
+      return {
+        status: true,
+        message: 'Profile updated successfully',
+        data: [],
+      };
+    } catch (error) {
+      this.logger.error(
+        `${this.updateProfile.name} got an Error: ${JSON.stringify(error)}`,
+      );
+      throw new BadRequestException(error.message);
     }
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        ...data,
-      },
-    });
+  }
 
-    return {
-      status: true,
-      message: 'Profile updated successfully',
-      data: [],
-    };
+  async getProfile(user: JwtPayload) {
+    this.logger.log(
+      `${this.getProfile.name} has been called | user: ${JSON.stringify(user)}`,
+    );
+    try {
+      const { userId } = user;
+
+      const userDetails = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!userDetails) {
+        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+      }
+
+      // Check if the user's createdAt is older than 3 days
+      const createdAt = new Date(userDetails.createdAt);
+      const threeDaysAgo = addDays(new Date(), -3);
+
+      return {
+        status: true,
+        message: 'Profile Fetched Succesfully',
+        data: {
+          user: {
+            id: userDetails.id,
+            email: userDetails.email,
+            username: userDetails.username,
+            // name: userDetails.name,
+            industry: userDetails.industry,
+            isVerified: userDetails.isVerified,
+            isFreeze: !userDetails.isVerified
+              ? createdAt < threeDaysAgo
+                ? true
+                : false
+              : false,
+          },
+        },
+      };
+    } catch (error) {
+      this.logger.error(
+        `${this.getProfile.name} got an Error: ${JSON.stringify(error)}`,
+      );
+      throw new BadRequestException(error.message);
+    }
   }
 
   async resetPassword(email: string, newPassword: string) {
@@ -282,7 +438,7 @@ export class AuthService {
     return { message: 'Password updated successfully' };
   }
 
-  async sendEmailVerification(user: UserDto) {
+  async sendEmailVerification(user: UserDto, origin: string) {
     const getUserDetails = await this.usersService.findOneByEmail(user.email);
     if (getUserDetails.isVerified) {
       return { message: 'Email is already verified!' };
@@ -290,7 +446,7 @@ export class AuthService {
     const payload = { email: getUserDetails.email, sub: getUserDetails.id };
     const token = this.jwtService.sign(payload, { expiresIn: '1h' });
 
-    await this.mailerService.sendEmailVerification(user.email, token);
+    await this.mailerService.sendEmailVerification(user.email, token, origin);
     // const verificationUrl = `${process.env.APP_URL}/auth/verify-email?token=${token}`;
 
     // await this.mailerService.sendEmailVerification({
@@ -314,7 +470,7 @@ export class AuthService {
         throw new UnauthorizedException('Invalid or Expired Token');
       }
 
-      const { sub: userId, email } = isValid;
+      const { sub: userId } = isValid;
 
       const verifyUser = await this.prisma.user.update({
         where: {
@@ -324,10 +480,21 @@ export class AuthService {
           isVerified: true,
         },
       });
+      // Check if the user's createdAt is older than 3 days
+      const createdAt = new Date(verifyUser.createdAt);
+      const threeDaysAgo = addDays(new Date(), -3);
+
       return {
         status: true,
         message: 'Email verified successfully',
-        data: verifyUser,
+        data: {
+          ...verifyUser,
+          isFreeze: !verifyUser.isVerified
+            ? createdAt < threeDaysAgo
+              ? true
+              : false
+            : false,
+        },
       };
     } catch (error) {
       this.logger.error(error);

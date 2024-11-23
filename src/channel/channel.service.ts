@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -8,9 +13,7 @@ import { JwtPayload } from 'jsonwebtoken';
 export class ChannelService {
   private readonly logger = new Logger(ChannelService.name);
 
-  constructor(
-    private prisma: PrismaService,
-  ) {}
+  constructor(private prisma: PrismaService) {}
   create(createChannelDto: CreateChannelDto) {
     return 'This action adds a new channel';
   }
@@ -102,7 +105,7 @@ export class ChannelService {
       }
 
       const myChannels = await this.prisma.channel.findMany({
-        where: { workSpaceId: workspace.id, userId: loggedInUser.id },
+        where: { workSpaceId: workspace.id },
       });
       return {
         status: true,
