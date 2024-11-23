@@ -14,6 +14,7 @@ import { CreateIdeaDto } from './dto/create-idea.dto';
 import { UpdateIdeaDto } from './dto/update-idea.dto';
 import { FilterContentDto } from './dto/filter-content.dto';
 import { SocialMediaPlatform } from 'src/enum/SocialMediaPlatform';
+import axios from 'axios';
 
 @Injectable()
 export class PostsService {
@@ -79,6 +80,14 @@ export class PostsService {
           );
         }
 
+        // if (channelNames && channelNames.length > 0) {
+        //   if (createPostDto.status === 'PUBLISHED') {
+        //     for (const x of channelsArray) {
+        //       await this.handleChannel(createPostDto, x.name);
+        //     }
+        //   }
+        // }
+
         // Create the post
         const createPost = await this.prisma.post.create({
           data: {
@@ -135,12 +144,6 @@ export class PostsService {
           workSpaceId: completePostData.workSpaceId,
           channels: channelData,
         };
-
-        if(completePostData.status === 'PUBLISHED'){
-
-          const checkIfContentPublished = await this.publishContentToPlatform(postData)
-
-        }
         return {
           status: true,
           message: 'Your post has been created!',
@@ -162,15 +165,128 @@ export class PostsService {
     }
   }
 
-  async publishContentToPlatform(postData){
+  async handleChannel(postData: any, channelName: any) {
+    switch (channelName.toUpperCase()) {
+      case 'LINKEDIN':
+        console.log('Processing LinkedIn channel...');
+        //const getChannelId = 
+        await this.publishContentToLinkedin(postData);
+        break;
 
-    const getUserProfileDetails = await this.getUserProfile()
+      case 'INSTAGRAM':
+        console.log('Processing Instagram channel...');
+        // Add logic for Instagram
+        break;
 
+      case 'TWITTER':
+        console.log('Processing Twitter channel...');
+        // Add logic for Twitter
+        break;
+
+      case 'TIKTOK':
+        console.log('Processing TikTok channel...');
+        // Add logic for TikTok
+        break;
+
+      default:
+        console.log('Unknown channel:', channelName);
+      // Handle unsupported or unknown channels
+    }
   }
 
-  async getUserProfile() {
-    
+  async publishContentToLinkedin(postData: any) {
+    const getUserProfileDetails = await this.getUserProfile(postData.authToken);
+    try {
+      const userPlatformId = getUserProfileDetails.data.sub;
+      if (userPlatformId) {
+        await this.createLinkedInPost(
+          userPlatformId,
+          postData.authToken,
+          postData.content,
+        );
+      } else {
+        throw new BadRequestException('Error: Unable to publish post');
+      }
+    } catch (e) {
+      return {
+        code: e.response?.status || 500,
+        message: e.message || 'Unable to publish post',
+      }; // Handle error situations
+    }
   }
+
+  async getUserProfile(authToken: string) {
+    const url = 'https://api.linkedin.com/v2/userinfo';
+
+    try {
+      const response = await axios.get(url, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+
+      if (response.status === 200) {
+        return response.data; // Return data if status is 200
+      } else {
+        return { code: response.status, message: 'Unexpected status code' }; // Handle unexpected status
+      }
+    } catch (error) {
+      return {
+        code: error.response?.status || 500,
+        message: error.message || 'An unknown error occurred',
+      }; // Handle error situations
+    }
+  }
+
+  async createLinkedInPost(
+    userPlatformId: string,
+    authToken: string,
+    content: string,
+  ) {
+    const accessToken = authToken;
+    const url = 'https://api.linkedin.com/v2/posts';
+
+    const postData = {
+      author: `urn:li:person:${userPlatformId}`,
+      commentary: content,
+      visibility: 'PUBLIC',
+      distribution: {
+        feedDistribution: 'MAIN_FEED',
+        targetEntities: [],
+        thirdPartyDistributionChannels: [],
+      },
+      lifecycleState: 'PUBLISHED',
+      isReshareDisabledByAuthor: false,
+    };
+
+    try {
+      const response = await axios.post(url, postData, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.status === 201) {
+        console.log('Post created successfully:', response.data);
+        return response.data;
+      } else {
+        console.log('Unexpected status code:', response.status);
+        return { code: response.status, message: 'Unexpected status code' };
+      }
+    } catch (error) {
+      console.error(
+        'Error creating post:',
+        error.response?.data || error.message,
+      );
+      return {
+        code: error.response?.status || 500,
+        message: error.response?.data || 'An unknown error occurred',
+      };
+    }
+  }
+
+  /////////////////// LINKEDIN Integration Task /////////////
 
   async updatePost(postId: string, updatePostDto: UpdatePostDto) {
     this.logger.log(
