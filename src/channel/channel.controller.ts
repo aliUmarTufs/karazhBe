@@ -17,7 +17,7 @@ export class ChannelController {
   @UseGuards(LocalAuthGuard)
   @Post('create-channel')
   async createChannel(
-    @Body() body: { name: string; userId: string; workSpaceId: string },
+    @Body() body: { name: string; userId: string; workSpaceId: string, authToken: string },
   ) {
     return await this.channelService.createChannel(body);
   }

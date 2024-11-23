@@ -36,7 +36,7 @@ export class ChannelService {
       `${this.createChannel.name} has been called | body: ${JSON.stringify(body)}`,
     );
     try {
-      const { userId, workSpaceId, name } = body;
+      const { userId, workSpaceId, name, authToken } = body;
 
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
@@ -62,7 +62,7 @@ export class ChannelService {
           name: name,
           workSpaceId: workspace.id,
           userId: user.id,
-          authToken: 'test',
+          authToken: authToken,
         },
       });
       return {
