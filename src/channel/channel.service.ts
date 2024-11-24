@@ -158,6 +158,78 @@ export class ChannelService {
     }
   }
 
+  async disconnectChannels(channelId: string, user: JwtPayload) {
+    try {
+      const { userId } = user;
+      const loggedInUser = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+      if (!loggedInUser) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      const myChannels = await this.prisma.channel.update({
+        where: { id: channelId },
+        data: {
+          authToken: '',
+          isTokenValid: false,
+        },
+      });
+      return {
+        status: true,
+        message: 'Channels disconnect successfully',
+        data: myChannels,
+      };
+    } catch (error) {
+      this.logger.error(
+        `${this.getMyChannels.name} got an Error: ${JSON.stringify(error)}`,
+      );
+      return {
+        status: false,
+        message: error.message,
+        error,
+      };
+    }
+  }
+
+  async refreshChannels(
+    channelId: string,
+    authToken: string,
+    user: JwtPayload,
+  ) {
+    try {
+      const { userId } = user;
+      const loggedInUser = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+      if (!loggedInUser) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      const myChannels = await this.prisma.channel.update({
+        where: { id: channelId },
+        data: {
+          authToken: authToken,
+          isTokenValid: true,
+        },
+      });
+      return {
+        status: true,
+        message: 'Channels refreshed successfully',
+        data: myChannels,
+      };
+    } catch (error) {
+      this.logger.error(
+        `${this.getMyChannels.name} got an Error: ${JSON.stringify(error)}`,
+      );
+      return {
+        status: false,
+        message: error.message,
+        error,
+      };
+    }
+  }
+
   async getMyChannels(workspaceId: string, user: JwtPayload) {
     this.logger.log(
       `${this.getMyChannels.name} has been called | workspaceId: ${workspaceId}, user: ${JSON.stringify(user)}}`,

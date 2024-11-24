@@ -63,6 +63,26 @@ export class ChannelController {
   }
 
   @UseGuards(LocalAuthGuard)
+  @Patch('disconnect-channel/:channelId')
+  async disconnectChannels(@Param('channelId') channelId: string, @Req() req) {
+    return await this.channelService.disconnectChannels(channelId, req.user);
+  }
+
+  @UseGuards(LocalAuthGuard)
+  @Patch('refresh-channel/:channelId')
+  async refreshChannels(
+    @Param('channelId') channelId: string,
+    @Body() data: any,
+    @Req() req,
+  ) {
+    return await this.channelService.refreshChannels(
+      channelId,
+      data.authToken,
+      req.user,
+    );
+  }
+
+  @UseGuards(LocalAuthGuard)
   @Get('channel-enum')
   async getChannelEnum() {
     return {
