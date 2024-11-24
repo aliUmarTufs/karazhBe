@@ -82,7 +82,9 @@ export class PostsService {
 
         if (channelNames && channelNames.length > 0) {
           if (createPostDto.status === 'PUBLISHED') {
+            console.log('Creating publish post to linkedin step 1');
             for (const x of channelsArray) {
+              console.log('Creating publish post to linkedin step 2');
               await this.handleChannel(createPostDto, x.name, x.id);
             }
           }
