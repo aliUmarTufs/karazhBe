@@ -72,7 +72,7 @@ export class ChannelService {
           name: name,
           workSpaceId: workspace.id,
           userId: user.id,
-          authToken: authToken,
+          authToken: authToken || 'testing token',
         },
       });
       return {
