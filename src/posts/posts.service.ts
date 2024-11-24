@@ -207,6 +207,10 @@ export class PostsService {
   async publishContentToLinkedin(postData: any, authToken: string) {
     console.log('Creating publish post to linkedin step 4');
     const getUserProfileDetails = await this.getUserProfile(authToken);
+    console.log(
+      'Creating publish post to linkedin step 4',
+      getUserProfileDetails,
+    );
     try {
       const userPlatformId = getUserProfileDetails.sub;
       if (userPlatformId) {
@@ -248,6 +252,7 @@ export class PostsService {
         return { code: response.status, message: 'Unexpected status code' }; // Handle unexpected status
       }
     } catch (error) {
+      console.log('Creating publish post to linkedin step 6', error);
       return {
         code: error.response?.status || 500,
         message: error.message || 'An unknown error occurred',
