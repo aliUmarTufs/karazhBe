@@ -281,8 +281,17 @@ export class ChannelService {
         throw new UnauthorizedException('User not found');
       }
 
-      if (data.authToken) {
-        const checkToken = await this.checkTokenStatus(data.authToken);
+      const getChannelDetails = await this.prisma.channel.findFirst({
+        where: { id: data.channelId },
+      });
+
+      if (!getChannelDetails)
+        throw new BadRequestException('Channel not found');
+
+      if (getChannelDetails.authToken) {
+        const checkToken = await this.checkTokenStatus(
+          getChannelDetails.authToken,
+        );
         if (!checkToken) {
           await this.prisma.channel.update({
             where: { id: data.channelId },
@@ -329,10 +338,8 @@ export class ChannelService {
       }
     } catch (error) {
       console.log('Function: checkTokenStatus, Service: channelService');
-      return {
-        code: error.response?.status || 500,
-        message: error.message || 'An unknown error occurred',
-      }; // Handle error situations
+      console.log('Error code: ', error.response?.status);
+      return false;
     }
   }
 }
