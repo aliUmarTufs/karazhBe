@@ -10,6 +10,8 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { JwtPayload } from 'jsonwebtoken';
 import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
+import { channel } from 'diagnostics_channel';
+import axios from 'axios';
 
 @Injectable()
 export class ChannelService {
@@ -266,6 +268,71 @@ export class ChannelService {
         message: error.message,
         error,
       };
+    }
+  }
+
+  async checkAuthTokenStatus(data: any, user: JwtPayload) {
+    try {
+      const { userId } = user;
+      const loggedInUser = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+      if (!loggedInUser) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      if (data.authToken) {
+        const checkToken = await this.checkTokenStatus(data.authToken);
+        if (!checkToken) {
+          await this.prisma.channel.update({
+            where: { id: data.channelId },
+            data: {
+              isTokenValid: false,
+            },
+          });
+        }
+        return {
+          status: true,
+          message: 'Access token status available',
+          data: checkToken,
+        };
+      }
+    } catch (error) {
+      this.logger.error(
+        `${this.getMyChannels.name} got an Error: ${JSON.stringify(error)}`,
+      );
+      return {
+        status: false,
+        message: error.message,
+        error,
+      };
+    }
+  }
+
+  async checkTokenStatus(authToken: string) {
+    console.log('Creating publish post to linkedin step 6');
+    const url = 'https://api.linkedin.com/v2/userinfo';
+
+    try {
+      const response = await axios.get(url, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+
+      if (response.status === 200) {
+        console.log(`CheckAuthTokenStatus ${true}`);
+        return true; // Return data if status is 200
+      } else {
+        console.log(`CheckAuthTokenStatus ${false}`);
+        return false; // Handle unexpected status
+      }
+    } catch (error) {
+      console.log('Function: checkTokenStatus, Service: channelService');
+      return {
+        code: error.response?.status || 500,
+        message: error.message || 'An unknown error occurred',
+      }; // Handle error situations
     }
   }
 }

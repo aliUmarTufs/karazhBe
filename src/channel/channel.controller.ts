@@ -90,4 +90,10 @@ export class ChannelController {
       data: SocialMediaPlatform,
     };
   }
+
+  @UseGuards(LocalAuthGuard)
+  @Post('check-authToken')
+  async getAuthTokenStatus(@Body() data: any, @Req() req) {
+    return await this.channelService.checkAuthTokenStatus(data, req.user);
+  }
 }
