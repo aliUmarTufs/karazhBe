@@ -176,6 +176,7 @@ export class PostsService {
             id: channelId,
           },
         });
+        console.log('Creating publish post to linkedin step 3');
         await this.publishContentToLinkedin(
           postData,
           getChannelToken.authToken,
@@ -204,10 +205,12 @@ export class PostsService {
   }
 
   async publishContentToLinkedin(postData: any, authToken: string) {
+    console.log('Creating publish post to linkedin step 4');
     const getUserProfileDetails = await this.getUserProfile(authToken);
     try {
       const userPlatformId = getUserProfileDetails.sub;
       if (userPlatformId) {
+        console.log('Creating publish post to linkedin step 9');
         await this.createLinkedInPost(
           userPlatformId,
           authToken,
@@ -217,6 +220,7 @@ export class PostsService {
         throw new BadRequestException('Error: Unable to publish post');
       }
     } catch (e) {
+      console.log('Creating publish post to linkedin step 5');
       return {
         code: e.response?.status || 500,
         message: e.message || 'Unable to publish post',
@@ -225,6 +229,7 @@ export class PostsService {
   }
 
   async getUserProfile(authToken: string) {
+    console.log('Creating publish post to linkedin step 6');
     const url = 'https://api.linkedin.com/v2/userinfo';
 
     try {
@@ -235,8 +240,10 @@ export class PostsService {
       });
 
       if (response.status === 200) {
+        console.log('Creating publish post to linkedin step 7');
         return response.data; // Return data if status is 200
       } else {
+        console.log('Creating publish post to linkedin step 8');
         return { code: response.status, message: 'Unexpected status code' }; // Handle unexpected status
       }
     } catch (error) {
@@ -252,6 +259,7 @@ export class PostsService {
     authToken: string,
     content: string,
   ) {
+    console.log('Creating publish post to linkedin step 10');
     const accessToken = authToken;
     const url = 'https://api.linkedin.com/v2/posts';
 
