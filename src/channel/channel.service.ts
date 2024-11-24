@@ -124,14 +124,14 @@ export class ChannelService {
     }
   }
 
-  async getAccessToken(authorizationToken: string) {
+  async getAccessToken(authorizationToken: string, redirectUri: any) {
     const url = 'https://www.linkedin.com/oauth/v2/accessToken';
     const body = {
       grant_type: 'authorization_code',
       code: authorizationToken,
       client_id: process.env.LINKEDIN_SECRET_ID,
       client_secret: process.env.LINKEDIN_SECRET_KEY,
-      redirect_uri: process.env.LINKEDIN_REDIRECT_URI,
+      redirect_uri: redirectUri,
     };
 
     const headers = {

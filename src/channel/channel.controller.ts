@@ -43,11 +43,12 @@ export class ChannelController {
   @Post('get-access-token')
   async getAccessToken(
     @Body()
-    body: {
-      authorizationToken: string;
-    },
+    data: any,
   ) {
-    return await this.channelService.getAccessToken(body.authorizationToken);
+    return await this.channelService.getAccessToken(
+      data.authorizationToken,
+      data.redirectUri,
+    );
   }
 
   @UseGuards(LocalAuthGuard)
