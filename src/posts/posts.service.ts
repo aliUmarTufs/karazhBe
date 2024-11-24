@@ -221,6 +221,7 @@ export class PostsService {
       }
     } catch (e) {
       console.log('Creating publish post to linkedin step 5');
+      console.log('step 5 error console', e);
       return {
         code: e.response?.status || 500,
         message: e.message || 'Unable to publish post',
