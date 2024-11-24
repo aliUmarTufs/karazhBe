@@ -301,9 +301,8 @@ export class ChannelService {
           });
         }
         return {
-          status: true,
+          status: checkToken,
           message: 'Access token status available',
-          data: checkToken,
         };
       }
     } catch (error) {
