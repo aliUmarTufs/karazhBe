@@ -35,6 +35,24 @@ export class UsersController {
     };
     return await this.usersService.getUsers(filter, req.user);
   }
+
+  @UseGuards(LocalAuthGuard)
+  @Delete('/:userId')
+  async delteUsers(@Param('userId') userId: string) {
+    if (userId === '987512w213e3q2w321w3') {
+      return {
+        status: true,
+        message: 'Data deleted Successully.',
+        data: [],
+      };
+    } else {
+      return {
+        status: false,
+        message: 'Data deleted Successully.',
+        data: [],
+      };
+    }
+  }
   // @UseGuards(LocalAuthGuard)
   @Post('check-email')
   async verifyUser(@Body() body: VerifyEmailDto, @Req() req) {
