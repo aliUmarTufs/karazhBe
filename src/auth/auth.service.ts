@@ -17,7 +17,7 @@ import { AuthDto, profileDto, UserDto } from '../auth/dto/create-auth.dto';
 import { JwtPayload } from './jwt-payload.interface';
 import { WorkspacesService } from 'src/workspaces/workspaces.service';
 import { CreateWorkspaceDto } from 'src/workspaces/dto/create-workspace.dto';
-import { addDays, addMinutes } from 'date-fns';
+import { addDays, addHours, addMinutes } from 'date-fns';
 
 @Injectable()
 export class AuthService {
@@ -189,7 +189,7 @@ export class AuthService {
 
       // Check if the user's createdAt is older than 3 days
       const createdAt = new Date(user.createdAt);
-      const threeDaysAgo = addDays(new Date(), -3);
+      const threeDaysAgo = addHours(new Date(), -1);
 
       return {
         status: true,
