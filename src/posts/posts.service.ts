@@ -15,11 +15,15 @@ import { UpdateIdeaDto } from './dto/update-idea.dto';
 import { FilterContentDto } from './dto/filter-content.dto';
 import { SocialMediaPlatform } from 'src/enum/SocialMediaPlatform';
 import axios from 'axios';
+import { GetFile } from 'src/aws/getfile.service';
 
 @Injectable()
 export class PostsService {
   private readonly logger = new Logger(PostsService.name);
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly getFile: GetFile,
+  ) {}
 
   async createIdea(createIdeaDto: CreateIdeaDto) {
     this.logger.log(
@@ -215,11 +219,35 @@ export class PostsService {
       const userPlatformId = getUserProfileDetails.sub;
       if (userPlatformId) {
         console.log('Creating publish post to linkedin step 9');
-        await this.createLinkedInPost(
-          userPlatformId,
-          authToken,
-          postData.content,
-        );
+        if (postData.mediaUrl) {
+          const signUrl = await this.getFile.get_s3(postData.mediaUrl);
+          const getUploadImgUrl = await this.registerPictureUpload(
+            userPlatformId,
+            authToken,
+          );
+          const imgUpload = await this.uploadImageFromS3ToLinkedIn(
+            signUrl.data,
+            getUploadImgUrl.data.value.uploadMechanism,
+          );
+
+          if (imgUpload === 201) {
+            const getImgId = getUploadImgUrl.data.value.asset;
+            await this.createLinkedInPostWithImg(
+              getImgId,
+              userPlatformId,
+              authToken,
+              postData.content,
+            );
+          } else {
+            throw new BadRequestException('Error: Unable to publish post');
+          }
+        } else {
+          await this.createLinkedInPost(
+            userPlatformId,
+            authToken,
+            postData.content,
+          );
+        }
       } else {
         throw new BadRequestException('Error: Unable to publish post');
       }
@@ -306,6 +334,118 @@ export class PostsService {
         code: error.response?.status || 500,
         message: error.response?.data || 'An unknown error occurred',
       };
+    }
+  }
+
+  async createLinkedInPostWithImg(
+    ImgId: string,
+    userPlatformId: string,
+    authToken: string,
+    content: string,
+  ) {
+    try {
+      const url = 'https://api.linkedin.com/v2/ugcPosts'; // LinkedIn API endpoint
+
+      const headers = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`,
+      };
+
+      const data = {
+        author: `urn:li:person:${userPlatformId}`,
+        lifecycleState: 'PUBLISHED',
+        specificContent: {
+          'com.linkedin.ugc.ShareContent': {
+            shareCommentary: {
+              text: content,
+            },
+            shareMediaCategory: 'IMAGE',
+            media: [
+              {
+                status: 'READY',
+                media: ImgId,
+              },
+            ],
+          },
+        },
+        visibility: {
+          'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC',
+        },
+      };
+
+      const response = await axios.post(url, data, { headers });
+      console.log('Post created successfully:', response.data);
+    } catch (error) {
+      console.error(
+        'Error creating LinkedIn post:',
+        error.response ? error.response.data : error.message,
+      );
+    }
+  }
+
+  async registerPictureUpload(userPlatformId: string, authToken: string) {
+    try {
+      const data = {
+        registerUploadRequest: {
+          owner: `urn:li:person:${userPlatformId}`,
+          recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
+          serviceRelationships: [
+            {
+              identifier: 'urn:li:userGeneratedContent',
+              relationshipType: 'OWNER',
+            },
+          ],
+        },
+      };
+
+      const response = await axios.post(
+        'https://api.linkedin.com/v2/assets?action=registerUpload',
+        data,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`,
+            Cookie:
+              'bcookie="v=2&f623c092-a10b-45e0-8058-de65fc2ec8b5"; lang=v=2&lang=en-us; lidc="b=VB97:s=V:r=V:a=V:p=V:g=3405:u=1:x=1:i=1735760124:t=1735846524:v=2:sig=AQGcGizKn3HoMFhsQsOnoQwNgZxb0eVV"',
+          },
+        },
+      );
+
+      console.log('Response:', response.data);
+      return response;
+    } catch (error) {
+      console.error(
+        'Error:',
+        error.response ? error.response.data : error.message,
+      );
+    }
+  }
+
+  async uploadImageFromS3ToLinkedIn(
+    imgUrl: string,
+    linkedinImgUploadUrl: string,
+  ) {
+    try {
+      const s3ImageUrl = imgUrl;
+      const linkedInUploadUrl =
+        linkedinImgUploadUrl[
+          'com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'
+        ];
+
+      // Fetch image data from S3
+      const { data: imageData } = await axios.get(s3ImageUrl, {
+        responseType: 'arraybuffer',
+      });
+
+      // Upload image to LinkedIn
+      const response = await axios.put(linkedInUploadUrl.uploadUrl, imageData, {
+        headers: { 'Content-Type': 'image/jpeg' }, // Use correct MIME type
+      });
+
+      console.log('Image uploaded successfully:', response.status);
+      return response.status;
+    } catch (error) {
+      console.error('Error uploading image:', error.message);
     }
   }
 
