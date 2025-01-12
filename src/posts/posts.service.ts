@@ -221,6 +221,29 @@ export class PostsService {
         console.log('Creating publish post to linkedin step 9');
         if (postData.mediaUrl) {
           const signUrl = await this.getFile.get_s3(postData.mediaUrl);
+          if (postData.mediaType === 'video/mp4') {
+            const getMediaUploadParams = await this.initiateVideoUpload(
+              authToken,
+              userPlatformId,
+            );
+
+            const uploadVideTolinkedIn = await this.uploadVideoToLinkedIn(
+              signUrl.data,
+
+              getMediaUploadParams.urlI,
+              authToken,
+            );
+
+            await this.postVideoContentToLinkedIn(
+              authToken,
+              userPlatformId,
+              getMediaUploadParams.asset,
+              postData.content,
+              postData.content,
+            );
+
+            console.log('getMediaUploadUrl', uploadVideTolinkedIn);
+          }
           const getUploadImgUrl = await this.registerPictureUpload(
             userPlatformId,
             authToken,
@@ -242,11 +265,11 @@ export class PostsService {
             throw new BadRequestException('Error: Unable to publish post');
           }
         } else {
-          await this.createLinkedInPost(
-            userPlatformId,
-            authToken,
-            postData.content,
-          );
+          // await this.createLinkedInPost(
+          //   userPlatformId,
+          //   authToken,
+          //   postData.content,
+          // );
         }
       } else {
         throw new BadRequestException('Error: Unable to publish post');
@@ -261,6 +284,56 @@ export class PostsService {
     }
   }
 
+  async postVideoContentToLinkedIn(
+    authToken: string,
+    userPlatformId: string,
+    assetId: string,
+    description: string,
+    text: string,
+  ): Promise<void> {
+    const url = 'https://api.linkedin.com/v2/ugcPosts';
+
+    const headers = {
+      Authorization: `Bearer ${authToken}`,
+      'Content-Type': 'application/json',
+    };
+
+    const body = {
+      author: `urn:li:person:${userPlatformId}`, // Or "urn:li:organization:<ORG_ID>"
+      lifecycleState: 'PUBLISHED',
+      specificContent: {
+        'com.linkedin.ugc.ShareContent': {
+          shareCommentary: {
+            text: text, // Caption for the video
+          },
+          shareMediaCategory: 'VIDEO',
+          media: [
+            {
+              status: 'READY',
+              description: {
+                text: description, // Description for the video
+              },
+              media: assetId, // Use the asset ID from the upload process
+            },
+          ],
+        },
+      },
+      visibility: {
+        'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC', // Visibility: PUBLIC, CONNECTIONS, etc.
+      },
+    };
+
+    try {
+      const response = await axios.post(url, body, { headers });
+      console.log('Post created successfully:', response.data);
+    } catch (error: any) {
+      console.error(
+        'Error creating post:',
+        error.response?.data || error.message,
+      );
+      throw error;
+    }
+  }
   async getUserProfile(authToken: string) {
     console.log('Creating publish post to linkedin step 6');
     const url = 'https://api.linkedin.com/v2/userinfo';
@@ -446,6 +519,84 @@ export class PostsService {
       return response.status;
     } catch (error) {
       console.error('Error uploading image:', error.message);
+    }
+  }
+
+  async initiateVideoUpload(accessToken: string, personId: string) {
+    const url = 'https://api.linkedin.com/v2/assets?action=registerUpload';
+    const headers = {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    };
+
+    const body = {
+      registerUploadRequest: {
+        owner: `urn:li:person:${personId}`, // Or "urn:li:organization:<org-id>"
+        recipes: ['urn:li:digitalmediaRecipe:feedshare-video'],
+        serviceRelationships: [
+          {
+            identifier: 'urn:li:userGeneratedContent',
+            relationshipType: 'OWNER',
+          },
+        ],
+        supportedUploadMechanism: ['SYNCHRONOUS_UPLOAD'],
+      },
+    };
+
+    try {
+      const response = await axios.post(url, body, { headers });
+      const videoUrl =
+        await response.data.value.uploadMechanism[
+          'com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'
+        ];
+      const urlI = videoUrl.uploadUrl;
+      const asset = response.data.value.asset;
+
+      console.log('Upload URL:', videoUrl.uploadUrl);
+      console.log('Asset:', asset);
+
+      return { urlI, asset };
+    } catch (error: any) {
+      console.error(
+        'Error initiating video upload:',
+        error.response?.data || error.message,
+      );
+      throw error;
+    }
+  }
+
+  async uploadVideoToLinkedIn(
+    s3ImageUrl: string,
+    uploadUrl: string,
+    accessToken: string,
+  ): Promise<void> {
+    try {
+      // Fetch image data from S3
+      const videoBuffer = await axios.get(s3ImageUrl, {
+        responseType: 'arraybuffer',
+      });
+
+      if (!videoBuffer) {
+        throw new Error('Failed to fetch video from S3');
+      }
+
+      // Upload the video to LinkedIn
+      const response = await axios.put(uploadUrl, videoBuffer.data, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'video/mp4', // Ensure correct MIME type
+        },
+        maxContentLength: Infinity, // Handle large video files
+        maxBodyLength: Infinity, // Avoid truncation
+      });
+
+      console.log('Video uploaded successfully:', response.status);
+    } catch (error: any) {
+      console.error(
+        'Error uploading video:',
+        error.response?.data || error.message,
+      );
+      throw error;
     }
   }
 
