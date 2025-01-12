@@ -243,33 +243,34 @@ export class PostsService {
             );
 
             console.log('getMediaUploadUrl', uploadVideTolinkedIn);
-          }
-          const getUploadImgUrl = await this.registerPictureUpload(
-            userPlatformId,
-            authToken,
-          );
-          const imgUpload = await this.uploadImageFromS3ToLinkedIn(
-            signUrl.data,
-            getUploadImgUrl.data.value.uploadMechanism,
-          );
-
-          if (imgUpload === 201) {
-            const getImgId = getUploadImgUrl.data.value.asset;
-            await this.createLinkedInPostWithImg(
-              getImgId,
+          } else {
+            const getUploadImgUrl = await this.registerPictureUpload(
               userPlatformId,
               authToken,
-              postData.content,
             );
-          } else {
-            throw new BadRequestException('Error: Unable to publish post');
+            const imgUpload = await this.uploadImageFromS3ToLinkedIn(
+              signUrl.data,
+              getUploadImgUrl.data.value.uploadMechanism,
+            );
+
+            if (imgUpload === 201) {
+              const getImgId = getUploadImgUrl.data.value.asset;
+              await this.createLinkedInPostWithImg(
+                getImgId,
+                userPlatformId,
+                authToken,
+                postData.content,
+              );
+            } else {
+              throw new BadRequestException('Error: Unable to publish post');
+            }
           }
         } else {
-          // await this.createLinkedInPost(
-          //   userPlatformId,
-          //   authToken,
-          //   postData.content,
-          // );
+          await this.createLinkedInPost(
+            userPlatformId,
+            authToken,
+            postData.content,
+          );
         }
       } else {
         throw new BadRequestException('Error: Unable to publish post');
